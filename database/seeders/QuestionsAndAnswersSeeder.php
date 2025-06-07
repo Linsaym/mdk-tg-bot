@@ -10,10 +10,6 @@ class QuestionsAndAnswersSeeder extends Seeder
 {
     public function run()
     {
-        // Очищаем таблицы
-        Answer::truncate();
-        Question::truncate();
-
         // Массив вопросов и их ответов
         $questions = [
             [
