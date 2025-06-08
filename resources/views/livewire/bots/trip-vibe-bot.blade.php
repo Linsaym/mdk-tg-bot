@@ -8,10 +8,16 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    public $questions = [];
     public $confirmingQuestionDeletion = false;
     public $confirmingAnswerDeletion = false;
     public $questionIdToDelete;
     public $answerIdToDelete;
+
+    public function mount()
+    {
+        $this->questions = Question::all();
+    }
 
     /**
      * Подтверждение удаления вопроса
@@ -70,7 +76,7 @@ new class extends Component {
         <!-- Список вопросов -->
         <div class="relative h-full flex-1 overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-700 dark:bg-[#161615]">
             <div class="space-y-6">
-                @foreach([] as $question)
+                @foreach($questions as $question)
                     <div class="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-[#1e1e1d]">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
@@ -146,7 +152,7 @@ new class extends Component {
             </div>
 
             <!-- Пустое состояние -->
-            @if(true)
+            @if($questions->isEmpty())
                 <div class="flex h-full flex-col items-center justify-center text-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-[#706f6c] dark:text-[#A1A09A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -257,16 +263,3 @@ new class extends Component {
         </div>
     @endif
 </div>
-
-<?php
-
-use function Livewire\Volt\state;
-use function Livewire\Volt\layout;
-
-layout('layouts.app');
-
-state([
-    'questions' => fn() => \App\Models\Question::with('answers')->paginate(10)
-]);
-
-?>
