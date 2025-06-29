@@ -47,10 +47,10 @@ TELEGRAM_WEBHOOK_URL=https://yourdomain.com/telegram/webhook
 ```
 
 ### 3. Установка вебхука
-Чтобы команда сработала проверьте указанны ли у вас в env
-TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_URL
+Чтобы команда сработала - проверьте указанны ли у вас в env
+TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_URL. А так же настройки в config/telegram.php
 ```bash
-    php artisan telegram:webhook
+    php artisan telegram:set-webhook
 ```
 
 ---
