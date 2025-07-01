@@ -45,7 +45,11 @@ class TelegramBotController extends Controller
 
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
 
-            if (str_starts_with($text, '/start')) {
+            if ($text === "Пригласить другого друга") {
+                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Просто отправь ему свой код: `$chatId`"]);
+            } else if ($text === "Начать тест заново") {
+                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Напиши `/start=123` (вместо 123 код того кто тебя пригласил)"]);
+            } else if (str_starts_with($text, '/start')) {
                 // Передаем полный текст команды
                 $this->handleStartCommand($chatId, $user, $text);
             } else if (str_starts_with($text, 'Я')) {
@@ -83,8 +87,12 @@ class TelegramBotController extends Controller
             return;
         }
 
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Ты + друг + билеты в руках.\n Но совпадаете ли вы по отпускному вайбу?\nБот от Ozon Travel поможет разобраться.\n Что нужно сделать:\n 1. Пройдите сначала тест самостоятельно.\n 2. Поделитесь ссылкой на тест с друзьями.\n 3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу\n"]);
         // Если подписан и имя есть — начинаем тест
         $this->sendFirstQuestion($chatId);
+
     }
 
     /**
@@ -106,6 +114,7 @@ class TelegramBotController extends Controller
             }
         } else {
             $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Получается тебя никто не пригласил...']);
+            $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Но если всё таки пригласил, вы можете рестартнуть. Просто напишите `/start=123` (вместо 123 код вашего друга)']);
         }
     }
 
@@ -162,7 +171,8 @@ class TelegramBotController extends Controller
         $user->update(['name' => $name]);
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Приятно познакомиться, $name! Что нужно сделать:\n1. Пройдите тест.\n2. Поделитесь ссылкой с друзьями.\n3. Узнаете, подходите ли для совместных поездок!",
+            'text' => "Ты + друг + билеты в руках. Но совпадаете ли вы по отпускному вайбу?\nБот от Ozon Travel поможет разобраться.\n
+Что нужно сделать:\n 1. Пройдите сначала тест самостоятельно.\n 2. Поделитесь ссылкой на тест с друзьями.\n 3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу\n",
             'reply_markup' => json_encode([
                 'inline_keyboard' => [[['text' => 'Начать тест', 'callback_data' => 'start_test']]]
             ])
@@ -189,7 +199,7 @@ class TelegramBotController extends Controller
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => $question->text,
+            'text' => "Вопрос: " . $question->text,
             'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
         ]);
     }
@@ -302,7 +312,7 @@ class TelegramBotController extends Controller
             'text' => "Тест завершён! Пригласите друга, чтобы узнать совместимость:",
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
-                    [['text' => 'Позвать друга', 'switch_inline_query' => "start={$user->telegram_id}"]],
+                    [['text' => 'Позвать друга', 'switch_inline_query' => "Привет! Проходи тест, чтобы узнать нашу совместимость в путешествиях. Введи команду /start={$user->telegram_id}"]],
                     [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']]
                 ]
             ])
@@ -427,7 +437,8 @@ class TelegramBotController extends Controller
             'text' => "Хо-хо, не могу понять что вы пишете! 😅 Лучше используйте кнопки для взаимодействия со мной.",
             'reply_markup' => json_encode([
                 'keyboard' => [[
-                    ['text' => 'Начать тест заново', 'callback_data' => 'restart_test']
+                    ['text' => 'Начать тест заново', 'callback_data' => 'restart_test'],
+                    ['text' => 'Пригласить другого друга', 'switch_inline_query' => "start"],
                 ]],
                 'resize_keyboard' => true,
                 'one_time_keyboard' => true
