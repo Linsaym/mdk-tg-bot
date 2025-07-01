@@ -1,0 +1,448 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Answer;
+use App\Models\TravelUser;
+use App\Models\Question;
+use Telegram\Bot\Api;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Telegram\Bot\Exceptions\TelegramSDKException;
+
+class TelegramBotController extends Controller
+{
+    private Api $telegram;
+
+    public function __construct(Api $telegram)
+    {
+        $this->telegram = $telegram;
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    public function handleWebhook(Request $request)
+    {
+        config(['session.driver' => 'array']);
+
+        $update = $this->telegram->getWebhookUpdate();
+        Log::info('Webhook update:', $update->toArray());
+
+        $chatId = $update->getChat()?->id;
+        $message = $update->getMessage();
+        $callbackQuery = $update->getCallbackQuery();
+
+        // Обработка callback-кнопок
+        if ($callbackQuery) {
+            $this->handleCallbackQuery($callbackQuery);
+            return response()->json(['status' => 'ok']);
+        }
+
+        // Обработка текстовых сообщений
+        if ($message && $text = $message->text) {
+            $text_split = explode(' ', $text);
+
+            $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
+
+            if ($text === "Пригласить другого друга") {
+                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Просто отправь ему свой код: `$chatId`"]);
+            } else if ($text === "Начать тест заново") {
+                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Напиши `/start=123` (вместо 123 код того кто тебя пригласил)"]);
+            } else if (str_starts_with($text, '/start')) {
+                // Передаем полный текст команды
+                $this->handleStartCommand($chatId, $user, $text);
+            } else if (str_starts_with($text, 'Я')) {
+                $this->saveUserName($chatId, $user, $text_split[1]);
+            } elseif (!$user->name) {
+                $this->askForName($chatId);
+            } else {
+                // Добавленная обработка случайных сообщений
+                $this->sendHintMessage($chatId);
+            }
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function handleStartCommand($chatId, TravelUser $user, $commandText)
+    {
+        // Парсим параметры из команды /start
+        $this->processInvitation($user, $commandText);
+
+        // Проверка подписки
+        $isSubscribed = $this->checkSubscription($chatId);
+
+        if (!$isSubscribed) {
+            $this->askForSubscription($chatId);
+            return;
+        }
+
+        // Если подписан, но имя не указано
+        if (!$user->name) {
+            $this->askForName($chatId);
+            return;
+        }
+
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Ты + друг + билеты в руках.\n Но совпадаете ли вы по отпускному вайбу?\nБот от Ozon Travel поможет разобраться.\n Что нужно сделать:\n 1. Пройдите сначала тест самостоятельно.\n 2. Поделитесь ссылкой на тест с друзьями.\n 3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу\n"]);
+        // Если подписан и имя есть — начинаем тест
+        $this->sendFirstQuestion($chatId);
+
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function processInvitation(TravelUser $user, $commandText)
+    {
+        Log::info($commandText);
+        // Проверяем наличие параметра приглашения
+        if (str_contains($commandText, '=')) {
+            $parts = explode('=', $commandText);
+            $inviterId = end($parts);
+            Log::info($parts);
+
+            // Проверяем что это числовой ID и не текущий пользователь
+            if (is_numeric($inviterId) && $inviterId != $user->telegram_id) {
+                $user->update(['invited_by' => $inviterId]);
+                Log::info("User {$user->telegram_id} invited by {$inviterId}");
+            }
+        } else {
+            $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Получается тебя никто не пригласил...']);
+            $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Но если всё таки пригласил, вы можете рестартнуть. Просто напишите `/start=123` (вместо 123 код вашего друга)']);
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function askForSubscription($chatId)
+    {
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Ой! Похоже, вы ещё не подписаны на канал Ozon Travel. Подпишитесь, чтобы открыть доступ к тесту!",
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [
+                    [['text' => 'Подписаться', 'url' => 'https://t.me/ozontravel_official']],
+                    [['text' => 'Я подписался!', 'callback_data' => 'check_subscription']]
+                ]
+            ])
+        ]);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function askForName($chatId)
+    {
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Перед тем, как отправиться в путешествие, расскажите, как вас зовут! Напишите сообщение в формате 'Я ***' "
+        ]);
+    }
+
+    private function checkSubscription($chatId)
+    {
+        // Временная заглушка: всегда считаем, что пользователь подписан
+        return true;
+
+//        try {
+//            $response = $this->telegram->getChatMember([
+//                'chat_id' => '@ozontravel_official',
+//                'user_id' => $chatId
+//            ]);
+//            return in_array($response->status, ['member', 'administrator', 'creator']);
+//        } catch (\Exception $e) {
+//            Log::error("Ошибка проверки подписки: " . $e->getMessage());
+//            return false;
+//        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function saveUserName($chatId, TravelUser $user, $name)
+    {
+        $user->update(['name' => $name]);
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Ты + друг + билеты в руках. Но совпадаете ли вы по отпускному вайбу?\nБот от Ozon Travel поможет разобраться.\n
+Что нужно сделать:\n 1. Пройдите сначала тест самостоятельно.\n 2. Поделитесь ссылкой на тест с друзьями.\n 3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу\n",
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [[['text' => 'Начать тест', 'callback_data' => 'start_test']]]
+            ])
+        ]);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function sendFirstQuestion($chatId)
+    {
+        $question = Question::with('answers')->first();
+        $this->sendQuestion($chatId, $question);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function sendQuestion($chatId, Question $question)
+    {
+        $keyboard = $question->answers->map(function ($answer) use ($question) {
+            return [['text' => $answer->text, 'callback_data' => "answer_{$question->id}_{$answer->id}"]];
+        })->toArray();
+
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Вопрос: " . $question->text,
+            'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
+        ]);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function handleCallbackQuery($callbackQuery)
+    {
+        $chatId = $callbackQuery->getMessage()->getChat()->id;
+        $messageId = $callbackQuery->getMessage()->getMessageId(); // Получаем ID сообщения
+        $callbackQueryId = $callbackQuery->getId();
+        $data = $callbackQuery->data;
+
+        // Всегда отвечаем на callback, чтобы убрать "часики"
+        $this->telegram->answerCallbackQuery([
+            'callback_query_id' => $callbackQueryId
+        ]);
+
+        $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
+
+        if ($data === 'check_subscription') {
+            $this->handleSubscriptionCheck($chatId, $user);
+        } elseif ($data === 'start_test' || $data === 'restart_test') {
+            $this->sendFirstQuestion($chatId);
+        } elseif (str_starts_with($data, 'answer_')) {
+            // Убираем кнопки в сообщении, на котором была нажата кнопка
+            $this->removeInlineButtons($chatId, $messageId);
+            $this->handleAnswer($chatId, $data, $user);
+        }
+    }
+
+    private function removeInlineButtons($chatId, $messageId)
+    {
+        try {
+            $this->telegram->editMessageReplyMarkup([
+                'chat_id' => $chatId,
+                'message_id' => $messageId,
+                'reply_markup' => json_encode(['inline_keyboard' => []])
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Ошибка при удалении кнопок: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function handleSubscriptionCheck($chatId, TravelUser $user)
+    {
+        $isSubscribed = $this->checkSubscription($chatId);
+
+        if ($isSubscribed) {
+            $user->update(['is_subscribed' => true]);
+
+            if (!$user->name) {
+                $this->askForName($chatId);
+            } else {
+                $this->sendFirstQuestion($chatId);
+            }
+        } else {
+            $this->telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => "Вы всё ещё не подписаны. Пожалуйста, подпитесь на канал и нажмите 'Я подписался!' снова."
+            ]);
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function handleAnswer($chatId, $callbackData, TravelUser $user)
+    {
+        [$_, $questionId, $answerId] = explode('_', $callbackData);
+        $answer = Answer::find($answerId);
+
+        // Сохраняем ответ
+        $answers = $user->test_answers ? json_decode($user->test_answers, true) : [];
+        $answers[$questionId] = $answerId;
+        $user->update(['test_answers' => json_encode($answers)]);
+
+        // Отправляем реакцию
+        if ($answer->reaction) {
+            $this->telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => $answer->reaction
+            ]);
+        }
+
+        // Следующий вопрос
+        $nextQuestion = Question::where('id', '>', $questionId)->first();
+        if ($nextQuestion) {
+            $this->sendQuestion($chatId, $nextQuestion);
+        } else {
+            $this->completeTest($chatId, $user);
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function completeTest($chatId, TravelUser $user, $messageId = null)
+    {
+        if ($messageId) {
+            $this->removeInlineButtons($chatId, $messageId);
+        }
+
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Тест завершён! Пригласите друга, чтобы узнать совместимость:",
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [
+                    [['text' => 'Позвать друга', 'switch_inline_query' => "Привет! Проходи тест, чтобы узнать нашу совместимость в путешествиях. Введи команду /start={$user->telegram_id}"]],
+                    [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']]
+                ]
+            ])
+        ]);
+
+        // Проверяем связи приглашения
+        $this->checkInvitationRelationships($user);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function checkInvitationRelationships(TravelUser $user)
+    {
+        // 1. Проверяем, был ли этот пользователь приглашен кем-то
+        if ($user->invited_by) {
+            $this->checkAndSendCompatibility($user);
+        }
+
+        // 2. Проверяем, есть ли пользователи, приглашенные этим пользователем
+        $invitedUsers = TravelUser::where('invited_by', $user->telegram_id)->get();
+
+        foreach ($invitedUsers as $invitedUser) {
+            if ($invitedUser->hasCompletedTest()) {
+                $this->checkAndSendCompatibility($invitedUser);
+            }
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function checkAndSendCompatibility(TravelUser $invitedUser)
+    {
+        // Находим пользователя, который пригласил
+        $inviter = TravelUser::where('telegram_id', $invitedUser->invited_by)->first();
+
+        if (!$inviter) return;
+
+        // Проверяем, что оба завершили тест
+        if ($invitedUser->hasCompletedTest() && $inviter->hasCompletedTest()) {
+            // Рассчитываем совместимость
+            $compatibility = $this->calculateCompatibility($inviter, $invitedUser);
+
+            // Отправляем результат обоим пользователям
+            try {
+                $this->sendCompatibilityResult($inviter->telegram_id, $invitedUser, $compatibility);
+                $this->sendCompatibilityResult($invitedUser->telegram_id, $inviter, $compatibility);
+            } catch (\Exception $e) {
+                Log::error($e->getMessage());
+            }
+        }
+    }
+
+    private function calculateCompatibility(TravelUser $user1, TravelUser $user2)
+    {
+        $answers1 = json_decode($user1->test_answers, true);
+        $answers2 = json_decode($user2->test_answers, true);
+
+        $totalQuestions = count($answers1);
+        $matchingAnswers = 0;
+
+        foreach ($answers1 as $questionId => $answerId) {
+            if (isset($answers2[$questionId]) && $answers2[$questionId] == $answerId) {
+                $matchingAnswers++;
+            }
+        }
+
+        $percentage = round(($matchingAnswers / $totalQuestions) * 100);
+
+        // Определяем тип совместимости на основе процента
+        if ($percentage >= 80) {
+            return 'Вы идеальная travel-пара! 🌟';
+        } elseif ($percentage >= 60) {
+            return 'Хорошая совместимость! Отдых будет отличным 👍';
+        } elseif ($percentage >= 40) {
+            return 'Средняя совместимость. Нужно договариваться! 🤝';
+        } else {
+            return 'Совместимость низкая. Возможно, лучше отдыхать отдельно? 😅';
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function sendCompatibilityResult($chatId, TravelUser $partner, $compatibilityText)
+    {
+        try {
+            $partnerName = $partner->name ?: 'Ваш друг';
+
+            $message = "🎉 Результат совместимости с $partnerName!\n\n";
+            $message .= "{$compatibilityText}\n\n";
+            $message .= "Вы можете пройти тест с другими друзьями, чтобы сравнить результаты!";
+
+            $this->telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => $message,
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => [
+                        [['text' => 'Пригласить другого друга', 'switch_inline_query' => "start"]],
+                        [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']]
+                    ]
+                ])
+            ]);
+
+        } catch (\Telegram\Bot\Exceptions\TelegramResponseException $e) {
+            if (str_contains($e->getMessage(), 'chat not found')) {
+                Log::warning("Не удалось отправить результат совместимости: пользователь $chatId заблокировал бота или чат не существует");
+            } else {
+                Log::error("Ошибка при отправке результата совместимости: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function sendHintMessage($chatId)
+    {
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Хо-хо, не могу понять что вы пишете! 😅 Лучше используйте кнопки для взаимодействия со мной.",
+            'reply_markup' => json_encode([
+                'keyboard' => [[
+                    ['text' => 'Начать тест заново', 'callback_data' => 'restart_test'],
+                    ['text' => 'Пригласить другого друга', 'switch_inline_query' => "start"],
+                ]],
+                'resize_keyboard' => true,
+                'one_time_keyboard' => true
+            ])
+        ]);
+    }
+}

@@ -13,4 +13,11 @@ class Question extends Model
     {
         return $this->hasMany(Answer::class);
     }
+
+    public static function count()
+    {
+        return cache()->remember('questions_count', 3600, function () {
+            return self::query()->count();
+        });
+    }
 }
