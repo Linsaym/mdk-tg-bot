@@ -205,10 +205,7 @@ class TelegramBotController extends Controller
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => TravelUser::firstWhere(
-                'telegram_id',
-                $chatId
-            )?->is_subscribed == 1 ? "Это бот от Ozon Travel✈️🌍" : $randomMessage
+            'text' => $this->checkSubscription($chatId) ? "Это бот от Ozon Travel✈️🌍" : $randomMessage
         ]);
 
         $this->telegram->sendMessage([
