@@ -46,20 +46,35 @@ class TelegramBotController extends Controller
             if ($text === "/code") {  // Добавлено
                 $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Ваш код: `$chatId`"]);  // Добавлено
                 return response()->json(['status' => 'ok']);  // Добавлено
-            } else if (str_starts_with($text, '/start')) {
-                // Передаем полный текст команды
-                $this->handleStartCommand($chatId, $user, $text);
-            } else if ($text === "Пригласить другого друга") {
-                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Просто отправь ему свой код: `$chatId`"]);
-            } else if ($text === "Начать тест заново") {
-                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Напиши `/start 123` (вместо 123 код того кто вас пригласил)"]);
-            } else if (str_starts_with($text, 'Я')) {
-                $this->saveUserName($chatId, $user, $text_split[1]);
-            } elseif (!$user->name) {
-                $this->askForName($chatId);
             } else {
-                // Обработка случайных сообщений
-                $this->sendHintMessage($chatId);
+                if (str_starts_with($text, '/start')) {
+                    // Передаем полный текст команды
+                    $this->handleStartCommand($chatId, $user, $text);
+                } else {
+                    if ($text === "Пригласить другого друга") {
+                        $this->telegram->sendMessage(
+                            ['chat_id' => $chatId, 'text' => "Просто отправь ему свой код: `$chatId`"]
+                        );
+                    } else {
+                        if ($text === "Начать тест заново") {
+                            $this->telegram->sendMessage(
+                                [
+                                    'chat_id' => $chatId,
+                                    'text' => "Напиши `/start 123` (вместо 123 код того кто вас пригласил)"
+                                ]
+                            );
+                        } else {
+                            if (str_starts_with($text, 'Я')) {
+                                $this->saveUserName($chatId, $user, $text_split[1]);
+                            } elseif (!$user->name) {
+                                $this->askForName($chatId);
+                            } else {
+                                // Обработка случайных сообщений
+                                $this->sendHintMessage($chatId);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -88,12 +103,29 @@ class TelegramBotController extends Controller
             return;
         }
 
+        $greetings = [
+            "Привет! Это не просто тест — это бот от Ozon Travel. Давайте проверим, насколько вы с другом подходите друг другу для путешествий.",
+            "Это бот от Ozon Travel — и он покажет, с кем реально круто поехать отдыхать, а с кем лучше просто мемами пообмениваться.",
+            "Партнёр в отпуске — это вам не шутки! Бот от Ozon Travel определит, кто ваш друг: любитель моря или горных вершин.",
+            "Этот тест от бота Ozon Travel покажет: вы идеальная travel-парочка или лучше разъехаться по разным курортам?",
+            "Ты + друг + билеты в руках. Но совпадаете ли вы по отпускному вайбу? Бот от Ozon Travel поможет разобраться."
+        ];
+
+        // Выбираем случайное приветствие
+        $randomGreeting = $greetings[array_rand($greetings)];
+
+        // Общая инструкция
+        $instructions = "\n\nЧто нужно сделать:\n"
+            . "1. Пройдите сначала тест самостоятельно.\n"
+            . "2. Поделитесь ссылкой на тест с друзьями.\n"
+            . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу";
+
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Ты + друг + билеты в руках.\n Но совпадаете ли вы по отпускному вайбу? Бот от Ozon Travel поможет разобраться.\n Что нужно сделать:\n 1. Пройдите сначала тест самостоятельно.\n 2. Поделитесь ссылкой на тест с друзьями.\n 3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу\n"]);
+            'text' => $randomGreeting . $instructions
+        ]);
         // Если подписан и имя есть — начинаем тест
         $this->sendFirstQuestion($chatId);
-
     }
 
     /**
@@ -104,7 +136,11 @@ class TelegramBotController extends Controller
         // Извлекаем параметр из команды /start
         $parts = explode(' ', $commandText);
 //
-        if(count($parts)>2) $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Кажется ваше ссылка неверного формата']);
+        if (count($parts) > 2) {
+            $this->telegram->sendMessage(
+                ['chat_id' => $user->telegram_id, 'text' => 'Кажется ваше ссылка неверного формата']
+            );
+        }
         if (count($parts) == 2) {
             $inviterId = $parts[1];
             // Проверяем что пригласитель существует
@@ -114,8 +150,15 @@ class TelegramBotController extends Controller
                 Log::info("User {$user->telegram_id} invited by {$inviterId}");
             }
         } else {
-            $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Получается вас никто не пригласил...']);
-            $this->telegram->sendMessage(['chat_id' => $user->telegram_id, 'text' => 'Но если всё таки пригласили, вы можете рестартнуть. Просто напишите `/start 123` (вместо 123 код вашего друга)']);
+            $this->telegram->sendMessage(
+                ['chat_id' => $user->telegram_id, 'text' => 'Получается вас никто не пригласил...']
+            );
+            $this->telegram->sendMessage(
+                [
+                    'chat_id' => $user->telegram_id,
+                    'text' => 'Но если всё таки пригласили, вы можете рестартнуть. Просто напишите `/start 123` (вместо 123 код вашего друга)'
+                ]
+            );
         }
     }
 
@@ -325,7 +368,7 @@ class TelegramBotController extends Controller
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']],
-                    [['text' => 'Поделиться ссылкой', 'url' => "https://t.me/share/url?url=".urlencode($refLink)]]
+                    [['text' => 'Поделиться ссылкой', 'url' => "https://t.me/share/url?url=" . urlencode($refLink)]]
                 ]
             ])
         ]);
@@ -362,7 +405,9 @@ class TelegramBotController extends Controller
         // Находим пользователя, который пригласил
         $inviter = TravelUser::where('telegram_id', $invitedUser->invited_by)->first();
 
-        if (!$inviter) return;
+        if (!$inviter) {
+            return;
+        }
 
         // Проверяем, что оба завершили тест
         if ($invitedUser->hasCompletedTest() && $inviter->hasCompletedTest()) {
@@ -426,15 +471,21 @@ class TelegramBotController extends Controller
                 'text' => $message,
                 'reply_markup' => json_encode([
                     'inline_keyboard' => [
-                        [['text' => 'Поделиться ссылкой', 'url' => "https://t.me/share/url?url=".urlencode($refLink)]],
+                        [
+                            [
+                                'text' => 'Поделиться ссылкой',
+                                'url' => "https://t.me/share/url?url=" . urlencode($refLink)
+                            ]
+                        ],
                         [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']]
                     ]
                 ])
             ]);
-
         } catch (\Telegram\Bot\Exceptions\TelegramResponseException $e) {
             if (str_contains($e->getMessage(), 'chat not found')) {
-                Log::warning("Не удалось отправить результат совместимости: пользователь $chatId заблокировал бота или чат не существует");
+                Log::warning(
+                    "Не удалось отправить результат совместимости: пользователь $chatId заблокировал бота или чат не существует"
+                );
             } else {
                 Log::error("Ошибка при отправке результата совместимости: " . $e->getMessage());
             }
@@ -450,10 +501,12 @@ class TelegramBotController extends Controller
             'chat_id' => $chatId,
             'text' => "Хо-хо, не могу понять что вы пишете! 😅 Лучше используйте кнопки для взаимодействия со мной.",
             'reply_markup' => json_encode([
-                'keyboard' => [[
-                    ['text' => 'Начать тест заново', 'callback_data' => 'restart_test'],
-                    ['text' => 'Пригласить другого друга', 'switch_inline_query' => "start"],
-                ]],
+                'keyboard' => [
+                    [
+                        ['text' => 'Начать тест заново', 'callback_data' => 'restart_test'],
+                        ['text' => 'Пригласить другого друга', 'switch_inline_query' => "start"],
+                    ]
+                ],
                 'resize_keyboard' => true,
                 'one_time_keyboard' => true
             ])
