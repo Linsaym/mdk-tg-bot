@@ -199,9 +199,17 @@ class TelegramBotController extends Controller
      */
     private function askForName($chatId)
     {
+        $messages = config('telegram_messages.name_request_messages');
+        $randomMessage = $messages[array_rand($messages)];
+
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Это бот от Ozon Travel! Перед тем, как отправиться в путешествие, расскажите, как вас зовут! Напишите сообщение в формате 'Я ***' "
+            'text' => $randomMessage
+        ]);
+
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Перед тем, как отправиться в путешествие, расскажите, как вас зовут! Напишите сообщение в формате 'Я ***' "
         ]);
     }
 
