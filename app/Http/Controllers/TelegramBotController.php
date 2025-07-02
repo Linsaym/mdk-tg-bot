@@ -202,9 +202,13 @@ class TelegramBotController extends Controller
         $messages = config('telegram_messages.name_request_messages');
         $randomMessage = $messages[array_rand($messages)];
 
+
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => $randomMessage
+            'text' => TravelUser::firstWhere(
+                'telegram_id',
+                $chatId
+            )?->is_subscribed ? "Это бот от Ozon Travel" : $randomMessage
         ]);
 
         $this->telegram->sendMessage([
