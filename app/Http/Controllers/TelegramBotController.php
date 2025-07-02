@@ -263,7 +263,7 @@ class TelegramBotController extends Controller
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Вопрос: " . $question->text,
+            'text' => "❓ Вопрос: " . $question->text,
             'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
         ]);
     }
