@@ -224,7 +224,7 @@ class TelegramBotController extends Controller
     private function saveUserName($chatId, TravelUser $user, $name)
     {
         $user->update(['name' => $name]);
-        $this->sendStartTestButton($chatId);
+        $this->askForSubscription($chatId);
     }
 
     /**
@@ -331,7 +331,7 @@ class TelegramBotController extends Controller
             if (!$user->name) {
                 $this->askForName($chatId);
             } else {
-                $this->sendFirstQuestion($chatId);
+                $this->sendStartTestButton($chatId);
             }
         } else {
             $this->telegram->sendMessage([
