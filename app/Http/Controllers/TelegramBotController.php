@@ -15,13 +15,7 @@ class TelegramBotController extends Controller
     private Api $telegram;
 
 
-    public array $greetings = [
-        "Привет! Это не просто тест — это бот от Ozon Travel. Давайте проверим, насколько вы с другом подходите друг другу для путешествий.",
-        "Это бот от Ozon Travel — и он покажет, с кем реально круто поехать отдыхать, а с кем лучше просто мемами пообмениваться.",
-        "Партнёр в отпуске — это вам не шутки! Бот от Ozon Travel определит, кто ваш друг: любитель моря или горных вершин.",
-        "Этот тест от бота Ozon Travel покажет: вы идеальная travel-парочка или лучше разъехаться по разным курортам?",
-        "Ты + друг + билеты в руках. Но совпадаете ли вы по отпускному вайбу? Бот от Ozon Travel поможет разобраться."
-    ];
+    public array $greetings;
 
     // Общая инструкция
     public string $instructions = "\n\nЧто нужно сделать:\n"
@@ -33,6 +27,7 @@ class TelegramBotController extends Controller
     public function __construct(Api $telegram)
     {
         $this->telegram = $telegram;
+        $this->greetings = config('telegram_messages.greetings');
     }
 
     private function getRandomGreetingWithInstructions(): string
@@ -113,24 +108,23 @@ class TelegramBotController extends Controller
         // Проверка подписки
         $isSubscribed = $this->checkSubscription($chatId);
 
-        if (!$isSubscribed) {
-            $this->askForSubscription($chatId);
-            return;
-        }
-
-        // Если подписан, но имя не указано
+        // Если имя не указанно
         if (!$user->name) {
             $this->askForName($chatId);
             return;
         }
 
+        //Спрашиваем подписку
+        $this->askForSubscription($chatId);
+        return;
 
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => $this->getRandomGreetingWithInstructions()
-        ]);
-        // Если подписан и имя есть — начинаем тест
-        $this->sendFirstQuestion($chatId);
+
+//        $this->telegram->sendMessage([
+//            'chat_id' => $chatId,
+//            'text' => $this->getRandomGreetingWithInstructions()
+//        ]);
+//        // Если подписан и имя есть — начинаем тест
+//        $this->sendFirstQuestion($chatId);
     }
 
     /**
@@ -156,12 +150,12 @@ class TelegramBotController extends Controller
             }
         } else {
             $this->telegram->sendMessage(
-                ['chat_id' => $user->telegram_id, 'text' => 'Получается вас никто не пригласил...']
+                ['chat_id' => $user->telegram_id, 'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.']
             );
             $this->telegram->sendMessage(
                 [
                     'chat_id' => $user->telegram_id,
-                    'text' => 'Но если всё таки пригласили, вы можете рестартнуть. Просто напишите `/start 123` (вместо 123 код вашего друга)'
+                    'text' => 'Если же вы с друзьями еще не проходили тест, то давайте приступим — будет интересно!'
                 ]
             );
         }
@@ -172,13 +166,7 @@ class TelegramBotController extends Controller
      */
     private function askForSubscription($chatId)
     {
-        $messages = [
-            "😅 Ой! Похоже, вы ещё не подписаны на канал Ozon Travel. Подпишитесь, чтобы открыть доступ к тесту!",
-            "⏳ Упс! Без подписки на канал Ozon Travel не получится начать. Нажмите «Подписаться» — и сразу продолжаем!",
-            "🚀 Почти готовы к старту! Остался один шаг — обязательно подпишитесь на канал Ozon Travel и возвращайтесь сюда.",
-            "📌 Подпишитесь на Ozon Travel, чтобы пройти тест и узнать свой отпускной вайб! Без подписки — никак.",
-            "💙 Чтобы продолжить, обязательно подпишитесь на канал Ozon Travel. И давайте выясним, как вы и друзья отдыхаете душой!"
-        ];
+        $messages = config('telegram_messages.ask_for_subscription');
 
         $randomMessage = $messages[array_rand($messages)];
 
@@ -187,7 +175,7 @@ class TelegramBotController extends Controller
             'text' => $randomMessage,
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
-                    [['text' => 'Подписаться', 'url' => 'https://t.me/ozontravel_official']],
+                    [['text' => 'Подписаться', 'url' => 'https://t.me/+sUletwbFVeA2OWYy']],
                     [['text' => 'Я подписался!', 'callback_data' => 'check_subscription']]
                 ]
             ])
@@ -199,13 +187,15 @@ class TelegramBotController extends Controller
      */
     private function askForName($chatId)
     {
-        $messages = config('telegram_messages.name_request_messages');
-        $randomMessage = $messages[array_rand($messages)];
+        $nameRequestMessages = config('telegram_messages.name_request_messages');
+        $welcomeMessages = config('telegram_messages.welcome_messages');
+        $nameRequestMessage = $nameRequestMessages[array_rand($nameRequestMessages)];
+        $welcomeMessage = $welcomeMessages[array_rand($welcomeMessages)];
 
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => $this->checkSubscription($chatId) ? "Это бот от Ozon Travel✈️🌍" : $randomMessage
+            'text' => $this->checkSubscription($chatId) ? $welcomeMessage : $nameRequestMessage
         ]);
 
         $this->telegram->sendMessage([

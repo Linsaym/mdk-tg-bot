@@ -61,7 +61,7 @@ new class extends Component {
     <div class="flex h-full w-full flex-1 flex-col gap-4 rounded-xl">
         <!-- Заголовок и кнопка добавления -->
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-medium">Управление Trip Vibe Bot</h1>
+            <h1 class="text-2xl font-medium">Управление Ozon Travel Vibe Bot</h1>
             <button
                 wire:click="$dispatch('openModal', { component: 'bots.trip-vibe-bot.create-question' })"
                 class="inline-flex items-center gap-2 rounded-md bg-[#f53003] px-4 py-2 text-sm font-medium text-white hover:bg-[#d32a03] dark:bg-[#FF4433] dark:hover:bg-[#e53929]"
