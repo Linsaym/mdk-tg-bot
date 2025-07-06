@@ -224,13 +224,7 @@ class TelegramBotController extends Controller
     private function saveUserName($chatId, TravelUser $user, $name)
     {
         $user->update(['name' => $name]);
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => $this->getRandomGreetingWithInstructions(),
-            'reply_markup' => json_encode([
-                'inline_keyboard' => [[['text' => 'Начать тест', 'callback_data' => 'start_test']]]
-            ])
-        ]);
+        $this->sendStartTestButton($chatId);
     }
 
     /**
@@ -240,6 +234,20 @@ class TelegramBotController extends Controller
     {
         $question = Question::with('answers')->first();
         $this->sendQuestion($chatId, $question);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function sendStartTestButton($chatId)
+    {
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => $this->getRandomGreetingWithInstructions(),
+            'reply_markup' => json_encode([
+                'inline_keyboard' => [[['text' => 'Начать тест', 'callback_data' => 'start_test']]]
+            ])
+        ]);
     }
 
     /**
@@ -328,7 +336,7 @@ class TelegramBotController extends Controller
         } else {
             $this->telegram->sendMessage([
                 'chat_id' => $chatId,
-                'text' => "Вы всё ещё не подписаны. Пожалуйста, подпитесь на канал и нажмите 'Я подписался!' снова."
+                'text' => "Вы всё ещё не подписаны. Пожалуйста, подпишитесь на канал и нажмите 'Я подписался!' снова."
             ]);
         }
     }
