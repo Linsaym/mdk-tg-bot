@@ -19,7 +19,7 @@ class TelegramBotController extends Controller
 
     // Общая инструкция
     public string $instructions = "\n\nЧто нужно сделать:\n"
-    . "1. Пройдите сначала тест самостоятельно.\n"
+    . "1. Пройдите сначала тест из 10 вопросов.\n"
     . "2. Поделитесь ссылкой на тест с друзьями.\n"
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу";
 
@@ -261,7 +261,7 @@ class TelegramBotController extends Controller
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "❓ Вопрос: " . $question->text,
+            'text' => "❓ Вопрос " . $question->id . ":" . $question->text,
             'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
         ]);
     }
