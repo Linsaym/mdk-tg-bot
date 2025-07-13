@@ -290,7 +290,7 @@ class TelegramBotController extends Controller
             'chat_id' => $chatId,
             'text' => "❓ Вопрос " . $question->id . ": " . $question->text,
             'reply_markup' => json_encode([
-                'keyboard' => array_chunk($keyboard, 1),
+                'keyboard' => $keyboard,
                 'resize_keyboard' => true,
                 'one_time_keyboard' => true
             ])
