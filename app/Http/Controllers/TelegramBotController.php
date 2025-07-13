@@ -286,7 +286,7 @@ class TelegramBotController extends Controller
         try {
             $this->telegram->sendAnimation([
                 'chat_id' => $chatId,
-                'animation' => InputFile::create("{$question->telegram_file_id}"),
+                'animation' => "{$question->telegram_file_id}",
                 'caption' => ""
             ]);
         } catch (Exception $e) {
@@ -413,7 +413,7 @@ class TelegramBotController extends Controller
         }
 
         // Генерируем реферальную ссылку
-        $refLink = "https://t.me/trip_vibe_bot?start=" . $user->telegram_id;
+        $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $user->telegram_id;
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
