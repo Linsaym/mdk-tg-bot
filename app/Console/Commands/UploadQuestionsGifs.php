@@ -34,7 +34,7 @@ class UploadQuestionsGifs extends Command
 
                 $response = Telegram::sendAnimation([
                     'chat_id' => config('telegram.admin_chat_id'),
-                    'animation' => InputFile::create("https://mdk-bots.ru/gifs/{$question->id}.gif"),
+                    'animation' => InputFile::create("https://mdk-bots.ru/gifs/{$question->id}.MP4"),
                     'caption' => "GIF for question {$question->id}"
                 ]);
 
