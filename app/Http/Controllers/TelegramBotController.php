@@ -273,21 +273,14 @@ class TelegramBotController extends Controller
 
     private function sendQuestionGif($chatId, Question $question)
     {
-        // Проверяем существование файлов с разными расширениями
-        $formats = ['gif'];
+        $baseUrl = config('telegram.gifs_base_url', 'https://mdk-bots.ru/gifs');
+        $gifUrl = $baseUrl . '/' . $question->id . '.gif';
 
-        foreach ($formats as $format) {
-            $filePath = public_path("gifs/{$question->id}.{$format}");
-
-            if (file_exists($filePath)) {
-                $this->telegram->sendAnimation([
-                    'chat_id' => $chatId,
-                    'animation' => new \CURLFile($filePath),
-                    'caption' => "Вопрос {$question->id}"
-                ]);
-                return; // Прерываем цикл после отправки первого найденного файла
-            }
-        }
+        $this->telegram->sendAnimation([
+            'chat_id' => $chatId,
+            'animation' => $gifUrl,
+            'caption' => "Вопрос {$question->id}"
+        ]);
     }
 
     /**

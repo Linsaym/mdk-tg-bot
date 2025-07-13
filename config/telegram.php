@@ -3,6 +3,7 @@
 use Telegram\Bot\Commands\HelpCommand;
 
 return [
+    'gifs_base_url' => env('GIFS_BASE_URL', 'https://mdk-bots.ru/gifs'),
     /*
     |--------------------------------------------------------------------------
     | Your Telegram Bots
