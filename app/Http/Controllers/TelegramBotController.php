@@ -57,10 +57,10 @@ class TelegramBotController extends Controller
 
 
         // Обработка текстовых сообщений
-        if ($message && $text = $message->text) {
+        if ($text = $message->text) {
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
-
+            Log::info('msg', [$message]);
             switch (true) {
                 case $text === "/code":
                     $this->telegram->sendMessage([
