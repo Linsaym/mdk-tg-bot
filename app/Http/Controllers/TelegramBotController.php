@@ -41,7 +41,6 @@ class TelegramBotController extends Controller
     public function handleWebhook(Request $request)
     {
         $update = $this->telegram->getWebhookUpdate();
-        Log::info('Webhook update:', $update->toArray());
 
         $chatId = $update->getChat()?->id;
         $message = $update->getMessage();
@@ -146,7 +145,6 @@ class TelegramBotController extends Controller
             $inviterExists = TravelUser::where('telegram_id', $inviterId)->exists();
             if ($inviterExists && $inviterId != $user->telegram_id) {
                 $user->update(['invited_by' => $inviterId]);
-                Log::info("User {$user->telegram_id} invited by {$inviterId}");
             }
         } else {
             $this->telegram->sendMessage(
@@ -266,7 +264,7 @@ class TelegramBotController extends Controller
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "❓ Вопрос " . $question->id . ":" . $question->text,
+            'text' => "❓ Вопрос " . $question->id . ": " . $question->text,
             'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
         ]);
     }
@@ -274,7 +272,7 @@ class TelegramBotController extends Controller
     private function sendQuestionGif($chatId, Question $question)
     {
         // Проверяем существование файлов с разными расширениями
-        $formats = ['gif', 'MP4'];
+        $formats = ['gif'];
 
         foreach ($formats as $format) {
             $filePath = public_path("gifs/{$question->id}.{$format}");
@@ -295,12 +293,10 @@ class TelegramBotController extends Controller
      */
     private function handleCallbackQuery($callbackQuery)
     {
-        Log::info('callback', $callbackQuery->toArray());
         $chatId = $callbackQuery->getMessage()->getChat()->id;
         $messageId = $callbackQuery->getMessage()->getMessageId(); // Получаем ID сообщения
         $callbackQueryId = $callbackQuery->getId();
         $data = $callbackQuery->data;
-        Log::info('$callbackQueryId', $callbackQueryId);
 
         // Всегда отвечаем на callback, чтобы убрать "часики"
         $this->telegram->answerCallbackQuery([
