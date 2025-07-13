@@ -271,7 +271,7 @@ class TelegramBotController extends Controller
         ]);
     }
 
-    private function sendQuestionGif($chatId, Question $question)
+    private function sendQuestionGif($chatId, Question $question, string $text = '')
     {
         $baseUrl = config('telegram.gifs_base_url', 'https://mdk-bots.ru/gifs');
         $gifUrl = $baseUrl . '/' . $question->id . '.gif';
@@ -282,7 +282,7 @@ class TelegramBotController extends Controller
         $this->telegram->sendAnimation([
             'chat_id' => $chatId,
             'animation' => $animation,
-            'caption' => "Вопрос {$question->id}"
+            'caption' => ""
         ]);
     }
 
