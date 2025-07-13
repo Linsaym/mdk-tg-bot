@@ -170,6 +170,13 @@ class TelegramBotController extends Controller
             $inviterExists = TravelUser::where('telegram_id', $inviterId)->exists();
             if ($inviterExists && $inviterId != $user->telegram_id) {
                 $user->update(['invited_by' => $inviterId]);
+            } else {
+                $this->telegram->sendMessage(
+                    [
+                        'chat_id' => $user->telegram_id,
+                        'text' => 'Самого себя пригласить нельзя😅'
+                    ]
+                );
             }
         } else {
             $this->telegram->sendMessage(
