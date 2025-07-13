@@ -3,6 +3,7 @@
 use Telegram\Bot\Commands\HelpCommand;
 
 return [
+    'admin_chat_id' => env('telegram.admin_chat_id', '743206490'),
     'gifs_base_url' => env('GIFS_BASE_URL', 'https://mdk-bots.ru/gifs'),
     /*
     |--------------------------------------------------------------------------
