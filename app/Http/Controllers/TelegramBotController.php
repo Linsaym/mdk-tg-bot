@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Answer;
 use App\Models\TravelUser;
 use App\Models\Question;
+use Exception;
 use Telegram\Bot\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Exceptions\TelegramSDKException;
+use Telegram\Bot\FileUpload\InputFile;
 
 class TelegramBotController extends Controller
 {
@@ -213,7 +215,7 @@ class TelegramBotController extends Controller
                 'user_id' => $chatId
             ]);
             return in_array($response->status, ['member', 'administrator', 'creator']);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Ошибка проверки подписки: " . $e->getMessage());
             return false;
         }
@@ -271,17 +273,19 @@ class TelegramBotController extends Controller
         ]);
     }
 
+    /**
+     * @throws TelegramSDKException
+     * @throws Exception
+     */
     private function sendQuestionGif($chatId, Question $question, string $text = '')
     {
-        $baseUrl = config('telegram.gifs_base_url', 'https://mdk-bots.ru/gifs');
-        $gifUrl = $baseUrl . '/' . $question->id . '.gif';
-
-        Log::info('gifsUrl', [$gifUrl]);
-        $animation = \Telegram\Bot\FileUpload\InputFile::create($gifUrl, 'question_' . $question->id . '.gif');
+        if (!$question->telegram_file_id) {
+            throw new Exception("Telegram file_id not found for question {$question->id}");
+        }
 
         $this->telegram->sendAnimation([
             'chat_id' => $chatId,
-            'animation' => $animation,
+            'animation' => InputFile::create($question->telegram_file_id),
             'caption' => ""
         ]);
     }
@@ -333,7 +337,7 @@ class TelegramBotController extends Controller
                 'message_id' => $messageId,
                 'reply_markup' => json_encode(['inline_keyboard' => []])
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Ошибка при удалении кнопок: " . $e->getMessage());
         }
     }
@@ -459,7 +463,7 @@ class TelegramBotController extends Controller
             try {
                 $this->sendCompatibilityResult($inviter->telegram_id, $invitedUser, $compatibility);
                 $this->sendCompatibilityResult($invitedUser->telegram_id, $inviter, $compatibility);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error($e->getMessage());
             }
         }

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Question extends Model
 {
-    protected $fillable = ['text'];
+    protected $fillable = ['text', 'telegram_file_id'];
 
     public function answers(): HasMany
     {
