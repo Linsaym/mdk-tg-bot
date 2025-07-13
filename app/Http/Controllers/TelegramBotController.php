@@ -283,11 +283,19 @@ class TelegramBotController extends Controller
             throw new Exception("Telegram file_id not found for question {$question->id}");
         }
 
-        $this->telegram->sendAnimation([
-            'chat_id' => $chatId,
-            'animation' => InputFile::create("{$question->telegram_file_id}"),
-            'caption' => ""
-        ]);
+        try {
+            $this->telegram->sendAnimation([
+                'chat_id' => $chatId,
+                'animation' => InputFile::create("{$question->telegram_file_id}"),
+                'caption' => ""
+            ]);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            $this->telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => 'не получилось отправить гифку('
+            ]);
+        }
     }
 
     /**
