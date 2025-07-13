@@ -137,6 +137,8 @@ class TelegramBotController extends Controller
             return;
         }
 
+        $user->test_answers = null;
+
         //Спрашиваем подписку
         $this->askForSubscription($chatId);
         return;
