@@ -295,6 +295,7 @@ class TelegramBotController extends Controller
      */
     private function handleCallbackQuery($callbackQuery)
     {
+        Log::info('callback', $callbackQuery);
         $chatId = $callbackQuery->getMessage()->getChat()->id;
         $messageId = $callbackQuery->getMessage()->getMessageId(); // Получаем ID сообщения
         $callbackQueryId = $callbackQuery->getId();
