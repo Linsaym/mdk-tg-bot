@@ -83,6 +83,7 @@ class TelegramBotController extends Controller
                 case $text === "Не про меня":
                 case $text === "По настроению":
                     $currentQuestion = $this->getCurrentQuestion($user);
+                    Log::info('msg', [$currentQuestion]);
                     if ($currentQuestion) {
                         $answer = Answer::where('question_id', $currentQuestion->id)
                             ->where('text', $text)
@@ -136,8 +137,6 @@ class TelegramBotController extends Controller
             $this->askForName($chatId);
             return;
         }
-
-        $user->test_answers = null;
 
         //Спрашиваем подписку
         $this->askForSubscription($chatId);
@@ -386,6 +385,7 @@ class TelegramBotController extends Controller
                 break;
 
             case 'start_test':
+                $user->update(['test_answers' => null]);
                 $this->sendFirstQuestion($chatId);
                 break;
 
