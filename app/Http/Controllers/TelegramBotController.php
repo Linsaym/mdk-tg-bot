@@ -300,6 +300,7 @@ class TelegramBotController extends Controller
         $messageId = $callbackQuery->getMessage()->getMessageId(); // Получаем ID сообщения
         $callbackQueryId = $callbackQuery->getId();
         $data = $callbackQuery->data;
+        Log::info('$callbackQueryId', $callbackQueryId);
 
         // Всегда отвечаем на callback, чтобы убрать "часики"
         $this->telegram->answerCallbackQuery([
