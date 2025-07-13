@@ -46,7 +46,6 @@ class TelegramBotController extends Controller
         $message = $update->getMessage();
         $callbackQuery = $update->getCallbackQuery();
 
-        $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
 
         // Обработка callback-кнопок
         if ($callbackQuery) {
@@ -57,6 +56,7 @@ class TelegramBotController extends Controller
         // Обработка текстовых сообщений
         if ($message && $text = $message->text) {
             $text_split = explode(' ', $text);
+            $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
 
             if ($text === "/code") {  // Добавлено
                 $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Ваш код: `$chatId`"]);  // Добавлено
@@ -256,7 +256,9 @@ class TelegramBotController extends Controller
      */
     private function sendQuestion($chatId, Question $question)
     {
+        Log::info('startSendQuestion', ['all good']);
         $this->sendQuestionGif($chatId, $question);
+        Log::info('endSendQuestionGif', ['all bad']);
 
         $keyboard = $question->answers->map(function ($answer) use ($question) {
             return [['text' => $answer->text, 'callback_data' => "answer_{$question->id}_{$answer->id}"]];
