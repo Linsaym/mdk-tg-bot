@@ -285,7 +285,7 @@ class TelegramBotController extends Controller
 
         $this->telegram->sendAnimation([
             'chat_id' => $chatId,
-            'animation' => $question->telegram_file_id,
+            'animation' => InputFile::create("{$question->telegram_file_id}"),
             'caption' => ""
         ]);
     }
