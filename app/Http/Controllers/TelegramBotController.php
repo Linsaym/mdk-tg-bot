@@ -150,7 +150,10 @@ class TelegramBotController extends Controller
             }
         } else {
             $this->telegram->sendMessage(
-                ['chat_id' => $user->telegram_id, 'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.']
+                [
+                    'chat_id' => $user->telegram_id,
+                    'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.'
+                ]
             );
             $this->telegram->sendMessage(
                 [
@@ -255,6 +258,8 @@ class TelegramBotController extends Controller
      */
     private function sendQuestion($chatId, Question $question)
     {
+        $this->sendQuestionGif($chatId, $question);
+
         $keyboard = $question->answers->map(function ($answer) use ($question) {
             return [['text' => $answer->text, 'callback_data' => "answer_{$question->id}_{$answer->id}"]];
         })->toArray();
@@ -264,6 +269,25 @@ class TelegramBotController extends Controller
             'text' => "❓ Вопрос " . $question->id . ":" . $question->text,
             'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
         ]);
+    }
+
+    private function sendQuestionGif($chatId, Question $question)
+    {
+        // Проверяем существование файлов с разными расширениями
+        $formats = ['gif', 'MP4'];
+
+        foreach ($formats as $format) {
+            $filePath = public_path("gifs/{$question->id}.{$format}");
+
+            if (file_exists($filePath)) {
+                $this->telegram->sendAnimation([
+                    'chat_id' => $chatId,
+                    'animation' => new \CURLFile($filePath),
+                    'caption' => "Вопрос {$question->id}"
+                ]);
+                return; // Прерываем цикл после отправки первого найденного файла
+            }
+        }
     }
 
     /**
@@ -485,7 +509,7 @@ class TelegramBotController extends Controller
             $message .= "{$compatibilityText}\n\n";
             $message .= "Вы можете пройти тест с другими друзьями, чтобы сравнить результаты!";
 
-            $refLink = "https://t.me/trip_vibe_bot?start=" . $chatId;
+            $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $chatId;
 
             $this->telegram->sendMessage([
                 'chat_id' => $chatId,
