@@ -276,9 +276,12 @@ class TelegramBotController extends Controller
         $baseUrl = config('telegram.gifs_base_url', 'https://mdk-bots.ru/gifs');
         $gifUrl = $baseUrl . '/' . $question->id . '.gif';
 
+        Log::info('gifsUrl', [$gifUrl]);
+        $animation = \Telegram\Bot\FileUpload\InputFile::create($gifUrl, 'question_' . $question->id . '.gif');
+
         $this->telegram->sendAnimation([
             'chat_id' => $chatId,
-            'animation' => $gifUrl,
+            'animation' => $animation,
             'caption' => "Вопрос {$question->id}"
         ]);
     }
