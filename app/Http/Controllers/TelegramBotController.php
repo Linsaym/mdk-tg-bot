@@ -209,7 +209,7 @@ class TelegramBotController extends Controller
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [['text' => 'Подписаться', 'url' => 'https://t.me/+sUletwbFVeA2OWYy']],
-                    [['text' => 'Я подписался!', 'callback_data' => 'check_subscription']]
+                    [['text' => 'Я подписан', 'callback_data' => 'check_subscription']]
                 ]
             ])
         ]);
