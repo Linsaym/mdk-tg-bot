@@ -493,7 +493,14 @@ class TelegramBotController extends Controller
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']],
-                    [['text' => 'Поделиться ссылкой', 'url' => "https://t.me/share/url?url=" . urlencode($refLink)]]
+                    [
+                        [
+                            'text' => 'Поделиться ссылкой',
+                            'url' => "https://t.me/share/url?url=" . urlencode($refLink) . "&text=" . urlencode(
+                                    "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴"
+                                )
+                        ]
+                    ]
                 ]
             ])
         ]);
