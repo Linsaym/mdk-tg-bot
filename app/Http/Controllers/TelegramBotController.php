@@ -496,7 +496,7 @@ class TelegramBotController extends Controller
                     [
                         [
                             'text' => 'Поделиться ссылкой',
-                            'url' => "https://t.me/share/url?text=" . urlencode(
+                            'url' => "https://t.me/share/url?text=" . rawurlencode(
                                     "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
                                 ) . "&url=" . urlencode($refLink)
                         ]
@@ -607,7 +607,7 @@ class TelegramBotController extends Controller
                         [
                             [
                                 'text' => 'Поделиться ссылкой',
-                                'url' => "https://t.me/share/url?text=" . urlencode(
+                                'url' => "https://t.me/share/url?text=" . rawurlencode(
                                         "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
                                     ) . "&url=" . urlencode($refLink)
                             ]
