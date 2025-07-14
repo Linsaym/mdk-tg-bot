@@ -496,14 +496,15 @@ class TelegramBotController extends Controller
                     [
                         [
                             'text' => 'Поделиться ссылкой',
-                            'url' => "https://t.me/share/url?url=" . urlencode($refLink) . "&text=" . urlencode(
-                                    "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴"
-                                )
+                            'url' => "https://t.me/share/url?text=" . urlencode(
+                                    "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
+                                ) . "&url=" . urlencode($refLink)
                         ]
                     ]
                 ]
             ])
         ]);
+
 
         // Проверяем связи приглашения
         $this->checkInvitationRelationships($user);
@@ -606,7 +607,9 @@ class TelegramBotController extends Controller
                         [
                             [
                                 'text' => 'Поделиться ссылкой',
-                                'url' => "https://t.me/share/url?url=" . urlencode($refLink)
+                                'url' => "https://t.me/share/url?text=" . urlencode(
+                                        "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
+                                    ) . "&url=" . urlencode($refLink)
                             ]
                         ],
                         [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']]
