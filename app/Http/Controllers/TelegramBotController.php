@@ -486,16 +486,18 @@ class TelegramBotController extends Controller
 
         // Генерируем реферальную ссылку
         $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $user->telegram_id;
+        $messages = config('telegram_messages.complete_test_message');
+        $randomMsg = $messages[array_rand($messages)];
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Тест завершён! Пригласите друга, чтобы узнать совместимость:",
+            'text' => $randomMsg,
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']],
                     [
                         [
-                            'text' => 'Поделиться ссылкой',
+                            'text' => 'Поделиться с друзьями',
                             'url' => "https://t.me/share/url?text=" . rawurlencode(
                                     "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
                                 ) . "&url=" . urlencode($refLink)
@@ -606,7 +608,7 @@ class TelegramBotController extends Controller
                     'inline_keyboard' => [
                         [
                             [
-                                'text' => 'Поделиться ссылкой',
+                                'text' => 'Поделиться с друзьями',
                                 'url' => "https://t.me/share/url?text=" . rawurlencode(
                                         "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
                                     ) . "&url=" . urlencode($refLink)
