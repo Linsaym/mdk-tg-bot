@@ -608,7 +608,7 @@ class TelegramBotController extends Controller
                     'inline_keyboard' => [
                         [
                             [
-                                'text' => 'Поделиться с друзьями',
+                                'text' => 'Поделиться ссылкой',
                                 'url' => "https://t.me/share/url?text=" . rawurlencode(
                                         "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
                                     ) . "&url=" . urlencode($refLink)
