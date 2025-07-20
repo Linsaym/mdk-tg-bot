@@ -21,9 +21,9 @@ class TelegramBotController extends Controller
 
     // Общая инструкция
     public string $instructions = "\n\nЧто нужно сделать:\n"
-    . "1. Пройдите сначала тест из 10 вопросов.\n"
+    . "1. Сначала самостоятельно пройдите тест из 10 вопросов.\n"
     . "2. Поделитесь ссылкой на тест с друзьями.\n"
-    . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу";
+    . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
 
 
     public function __construct(Api $telegram)
@@ -55,43 +55,66 @@ class TelegramBotController extends Controller
             return response()->json(['status' => 'ok']);
         }
 
+
         // Обработка текстовых сообщений
-        if ($message && $text = $message->text) {
+        if ($text = $message->text) {
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
+            Log::info('msg', [$message]);
+            switch (true) {
+                case $text === "/code":
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Ваш код: `$chatId`"
+                    ]);
+                    return response()->json(['status' => 'ok']);
 
-            if ($text === "/code") {  // Добавлено
-                $this->telegram->sendMessage(['chat_id' => $chatId, 'text' => "Ваш код: `$chatId`"]);  // Добавлено
-                return response()->json(['status' => 'ok']);  // Добавлено
-            } else {
-                if (str_starts_with($text, '/start')) {
-                    // Передаем полный текст команды
+                case str_starts_with($text, '/start'):
                     $this->handleStartCommand($chatId, $user, $text);
-                } else {
-                    if ($text === "Пригласить другого друга") {
-                        $this->telegram->sendMessage(
-                            ['chat_id' => $chatId, 'text' => "Просто отправь ему свой код: `$chatId`"]
-                        );
-                    } else {
-                        if ($text === "Начать тест заново") {
-                            $this->telegram->sendMessage(
-                                [
-                                    'chat_id' => $chatId,
-                                    'text' => "Напиши `/start 123` (вместо 123 код того кто вас пригласил)"
-                                ]
-                            );
-                        } else {
-                            if (str_starts_with($text, 'Я')) {
-                                $this->saveUserName($chatId, $user, $text_split[1]);
-                            } elseif (!$user->name) {
-                                $this->askForName($chatId);
-                            } else {
-                                // Обработка случайных сообщений
-                                $this->sendHintMessage($chatId);
-                            }
+                    break;
+
+                case $text === "Пригласить другого друга":
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Просто отправь ему свой код: `$chatId`"
+                    ]);
+                    break;
+                case $text === "Про меня":
+                case $text === "Не про меня":
+                case $text === "По настроению":
+                    $currentQuestion = $this->getCurrentQuestion($user);
+                    Log::info('msg', [$currentQuestion]);
+                    if ($currentQuestion) {
+                        $answer = Answer::where('question_id', $currentQuestion->id)
+                            ->where('text', $text)
+                            ->first();
+
+                        if ($answer) {
+                            $this->handleTextAnswer($chatId, $user, $currentQuestion, $answer);
                         }
+                    } else {
+                        $this->sendHintMessage($chatId);
                     }
-                }
+                    break;
+
+                case $text === "Начать тест заново":
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Напиши `/start 123` (вместо 123 код того кто вас пригласил)"
+                    ]);
+                    break;
+
+                case str_starts_with($text, 'Я'):
+                    $this->saveUserName($chatId, $user, $text_split[1]);
+                    break;
+
+                case !$user->name:
+                    $this->askForName($chatId);
+                    break;
+
+                default:
+                    $this->sendHintMessage($chatId);
+                    break;
             }
         }
 
@@ -147,6 +170,13 @@ class TelegramBotController extends Controller
             $inviterExists = TravelUser::where('telegram_id', $inviterId)->exists();
             if ($inviterExists && $inviterId != $user->telegram_id) {
                 $user->update(['invited_by' => $inviterId]);
+            } else {
+                $this->telegram->sendMessage(
+                    [
+                        'chat_id' => $user->telegram_id,
+                        'text' => 'Самого себя пригласить нельзя, лучше отправьте ваш код или ссылку другу😅'
+                    ]
+                );
             }
         } else {
             $this->telegram->sendMessage(
@@ -179,7 +209,7 @@ class TelegramBotController extends Controller
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [['text' => 'Подписаться', 'url' => 'https://t.me/+sUletwbFVeA2OWYy']],
-                    [['text' => 'Я подписался!', 'callback_data' => 'check_subscription']]
+                    [['text' => 'Я подписан', 'callback_data' => 'check_subscription']]
                 ]
             ])
         ]);
@@ -258,9 +288,7 @@ class TelegramBotController extends Controller
      */
     private function sendQuestion($chatId, Question $question)
     {
-        Log::info('startSendQuestion', ['all good']);
         $this->sendQuestionGif($chatId, $question);
-        Log::info('endSendQuestionGif', ['all bad']);
 
         $keyboard = $question->answers->map(function ($answer) use ($question) {
             return [['text' => $answer->text, 'callback_data' => "answer_{$question->id}_{$answer->id}"]];
@@ -269,7 +297,11 @@ class TelegramBotController extends Controller
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => "❓ Вопрос " . $question->id . ": " . $question->text,
-            'reply_markup' => json_encode(['inline_keyboard' => $keyboard])
+            'reply_markup' => json_encode([
+                'keyboard' => $keyboard,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => true
+            ])
         ]);
     }
 
@@ -298,6 +330,45 @@ class TelegramBotController extends Controller
         }
     }
 
+    private function getCurrentQuestion(TravelUser $user): ?Question
+    {
+        $answers = $user->test_answers ? json_decode($user->test_answers, true) : [];
+
+        if (empty($answers)) {
+            return Question::first();
+        }
+
+        $lastQuestionId = max(array_keys($answers));
+        return Question::where('id', '>', $lastQuestionId)->first();
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function handleTextAnswer($chatId, TravelUser $user, Question $question, Answer $answer)
+    {
+        // Сохраняем ответ
+        $answers = $user->test_answers ? json_decode($user->test_answers, true) : [];
+        $answers[$question->id] = $answer->id;
+        $user->update(['test_answers' => json_encode($answers)]);
+
+        // Отправляем реакцию
+        if ($answer->reaction) {
+            $this->telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => $answer->reaction
+            ]);
+        }
+
+        // Следующий вопрос
+        $nextQuestion = Question::where('id', '>', $question->id)->first();
+        if ($nextQuestion) {
+            $this->sendQuestion($chatId, $nextQuestion);
+        } else {
+            $this->completeTest($chatId, $user);
+        }
+    }
+
     /**
      * @throws TelegramSDKException
      */
@@ -321,6 +392,7 @@ class TelegramBotController extends Controller
                 break;
 
             case 'start_test':
+                $user->update(['test_answers' => null]);
                 $this->sendFirstQuestion($chatId);
                 break;
 
@@ -414,17 +486,27 @@ class TelegramBotController extends Controller
 
         // Генерируем реферальную ссылку
         $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $user->telegram_id;
+        $messages = config('telegram_messages.complete_test_message');
+        $randomMsg = $messages[array_rand($messages)];
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Тест завершён! Пригласите друга, чтобы узнать совместимость:",
+            'text' => $randomMsg,
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
                     [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']],
-                    [['text' => 'Поделиться ссылкой', 'url' => "https://t.me/share/url?url=" . urlencode($refLink)]]
+                    [
+                        [
+                            'text' => 'Поделиться с друзьями',
+                            'url' => "https://t.me/share/url?text=" . rawurlencode(
+                                    "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
+                                ) . "&url=" . urlencode($refLink)
+                        ]
+                    ]
                 ]
             ])
         ]);
+
 
         // Проверяем связи приглашения
         $this->checkInvitationRelationships($user);
@@ -526,8 +608,10 @@ class TelegramBotController extends Controller
                     'inline_keyboard' => [
                         [
                             [
-                                'text' => 'Поделиться ссылкой',
-                                'url' => "https://t.me/share/url?url=" . urlencode($refLink)
+                                'text' => 'Пригласить еще друзей',
+                                'url' => "https://t.me/share/url?text=" . rawurlencode(
+                                        "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
+                                    ) . "&url=" . urlencode($refLink)
                             ]
                         ],
                         [['text' => 'Пройти тест заново', 'callback_data' => 'restart_test']]
