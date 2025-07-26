@@ -80,7 +80,8 @@
                         </svg>
                         <p class="mt-2 text-[#706f6c] dark:text-[#A1A09A]">
                             График активности будет отображаться здесь<br>
-                            (создание dashboard, не оплаченно)
+                            (создание dashboard, не оплаченно)<br>
+                            <a href="https://mdk-bots.ru/admin">Админка тут https://mdk-bots.ru/admin</a>
                         </p>
                     </div>
                 </div>

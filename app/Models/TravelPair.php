@@ -7,12 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TravelPair extends Model
 {
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
+    protected $table = 'travel_pairs';
     protected $fillable = [
         'user1_id',
         'user2_id',
