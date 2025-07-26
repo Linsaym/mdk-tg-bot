@@ -17,14 +17,14 @@
                                wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
         </flux:navlist.group>
         <flux:navlist.group :heading="__('Telegram Bots')" class="grid">
-            <flux:navlist.item icon="paper-airplane" href="{{ route('questions') }}"
-                               :current="request()->routeIs('questions')" wire:navigate>
-                Вопросы и реакции
-            </flux:navlist.item>
-            <flux:navlist.item icon="chat-bubble-left-right" href="{{ route('bot_messages') }}"
-                               :current="request()->routeIs('bot_messages')" wire:navigate>
-                Сообщения бота
-            </flux:navlist.item>
+            {{--            <flux:navlist.item icon="paper-airplane" href="{{ route('questions') }}"--}}
+            {{--                               :current="request()->routeIs('questions')" wire:navigate>--}}
+            {{--                Вопросы и реакции--}}
+            {{--            </flux:navlist.item>--}}
+            {{--            <flux:navlist.item icon="chat-bubble-left-right" href="{{ route('bot_messages') }}"--}}
+            {{--                               :current="request()->routeIs('bot_messages')" wire:navigate>--}}
+            {{--                Сообщения бота--}}
+            {{--            </flux:navlist.item>--}}
         </flux:navlist.group>
     </flux:navlist>
 
