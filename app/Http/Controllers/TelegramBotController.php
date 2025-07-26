@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Answer;
 use App\Models\TravelUser;
 use App\Models\Question;
+use App\Repositories\TelegramMessageRepository;
 use Exception;
 use Telegram\Bot\Api;
 use Illuminate\Http\Request;
@@ -16,8 +17,7 @@ class TelegramBotController extends Controller
 {
     private Api $telegram;
 
-
-    public array $greetings;
+    private TelegramMessageRepository $messageRepository;
 
     // Общая инструкция
     public string $instructions = "\n\nЧто нужно сделать:\n"
@@ -26,15 +26,10 @@ class TelegramBotController extends Controller
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
 
 
-    public function __construct(Api $telegram)
+    public function __construct(Api $telegram, TelegramMessageRepository $messageRepository)
     {
         $this->telegram = $telegram;
-        $this->greetings = config('telegram_messages.greetings');
-    }
-
-    private function getRandomGreetingWithInstructions(): string
-    {
-        return $this->greetings[array_rand($this->greetings)] . $this->instructions;
+        $this->messageRepository = $messageRepository;
     }
 
     /**
@@ -199,9 +194,7 @@ class TelegramBotController extends Controller
      */
     private function askForSubscription($chatId)
     {
-        $messages = config('telegram_messages.ask_for_subscription');
-
-        $randomMessage = $messages[array_rand($messages)];
+        $randomMessage = $this->messageRepository->getRandomMessageFromGroup('ask_for_subscription');;
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
@@ -220,10 +213,8 @@ class TelegramBotController extends Controller
      */
     private function askForName($chatId)
     {
-        $nameRequestMessages = config('telegram_messages.name_request_messages');
-        $welcomeMessages = config('telegram_messages.welcome_messages');
-        $nameRequestMessage = $nameRequestMessages[array_rand($nameRequestMessages)];
-        $welcomeMessage = $welcomeMessages[array_rand($welcomeMessages)];
+        $nameRequestMessage = $this->messageRepository->getRandomMessageFromGroup('name_request_messages');
+        $welcomeMessage = $this->messageRepository->getRandomMessageFromGroup('welcome_messages');
 
 
         $this->telegram->sendMessage([
@@ -276,7 +267,7 @@ class TelegramBotController extends Controller
     {
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => $this->getRandomGreetingWithInstructions(),
+            'text' => $this->messageRepository->getRandomMessageFromGroup('greetings'),
             'reply_markup' => json_encode([
                 'inline_keyboard' => [[['text' => 'Начать тест', 'callback_data' => 'start_test']]]
             ])
@@ -486,8 +477,7 @@ class TelegramBotController extends Controller
 
         // Генерируем реферальную ссылку
         $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $user->telegram_id;
-        $messages = config('telegram_messages.complete_test_message');
-        $randomMsg = $messages[array_rand($messages)];
+        $randomMsg = $this->messageRepository->getRandomMessageFromGroup('ask_for_subscription');;
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
