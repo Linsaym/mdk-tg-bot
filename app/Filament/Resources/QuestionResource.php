@@ -41,7 +41,7 @@ class QuestionResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('telegram_file_id')
+                Tables\Columns\TextColumn::make('text')
                     ->searchable(),
             ])
             ->filters([

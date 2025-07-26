@@ -3,15 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TelegramMessageResource\Pages;
-use App\Filament\Resources\TelegramMessageResource\RelationManagers;
 use App\Models\TelegramMessage;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TelegramMessageResource extends Resource
 {
@@ -41,7 +38,7 @@ class TelegramMessageResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('key')
+                Tables\Columns\TextColumn::make('text')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('group')
                     ->searchable(),
