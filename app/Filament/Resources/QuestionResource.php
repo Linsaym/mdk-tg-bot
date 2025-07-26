@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\QuestionResource\Pages;
-use App\Filament\Resources\QuestionResource\RelationManagers;
 use App\Models\Question;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -24,8 +23,7 @@ class QuestionResource extends Resource
                 Forms\Components\Textarea::make('text')
                     ->required()
                     ->label('Текст вопроса')
-                    ->columnSpanFull()
-                    ->label('Telegram File ID'),
+                    ->columnSpanFull(),
                 Forms\Components\TextInput::make('telegram_file_id')
                     ->tel(),
             ]);
