@@ -92,19 +92,13 @@ class TelegramBotController extends Controller
                     }
                     break;
 
+                case !$user->name:
                 case $text === "Начать тест заново":
-                    $this->telegram->sendMessage([
-                        'chat_id' => $chatId,
-                        'text' => "Напиши `/start 123` (вместо 123 код того кто вас пригласил)"
-                    ]);
+                    $this->askForName($chatId);
                     break;
 
                 case str_starts_with($text, 'Я'):
                     $this->saveUserName($chatId, $user, $text_split[1]);
-                    break;
-
-                case !$user->name:
-                    $this->askForName($chatId);
                     break;
 
                 default:
