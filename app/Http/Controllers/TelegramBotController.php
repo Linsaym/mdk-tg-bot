@@ -477,7 +477,7 @@ class TelegramBotController extends Controller
 
         // Генерируем реферальную ссылку
         $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $user->telegram_id;
-        $randomMsg = $this->messageRepository->getRandomMessageFromGroup('ask_for_subscription');;
+        $randomMsg = $this->messageRepository->getRandomMessageFromGroup('complete_test_message');;
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
