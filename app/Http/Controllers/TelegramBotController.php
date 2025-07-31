@@ -156,18 +156,22 @@ class TelegramBotController extends Controller
                 );
             }
         } else {
-            $this->telegram->sendMessage(
-                [
-                    'chat_id' => $user->telegram_id,
-                    'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.'
-                ]
-            );
-            $this->telegram->sendMessage(
-                [
-                    'chat_id' => $user->telegram_id,
-                    'text' => 'Если же вы с друзьями еще не проходили тест, то давайте приступим — будет интересно!'
-                ]
-            );
+            try {
+                $this->telegram->sendMessage(
+                    [
+                        'chat_id' => $user->telegram_id,
+                        'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.'
+                    ]
+                );
+                $this->telegram->sendMessage(
+                    [
+                        'chat_id' => $user->telegram_id,
+                        'text' => 'Если же вы с друзьями еще не проходили тест, то давайте приступим — будет интересно!'
+                    ]
+                );
+            } catch (TelegramSDKException $e) {
+                return;
+            }
         }
     }
 
@@ -231,8 +235,6 @@ class TelegramBotController extends Controller
     {
         $user->name = $name;
         $user->save();
-        Log::info(1, [$name]);
-        Log::info(2, [$user]);
         $this->askForSubscription($chatId);
     }
 
