@@ -55,7 +55,6 @@ class TelegramBotController extends Controller
         if ($text = $message->text) {
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
-            Log::info('msg', [$message]);
             switch (true) {
                 case $text === "/code":
                     $this->telegram->sendMessage([
@@ -78,7 +77,6 @@ class TelegramBotController extends Controller
                 case $text === "Не про меня":
                 case $text === "По настроению":
                     $currentQuestion = $this->getCurrentQuestion($user);
-                    Log::info('msg', [$currentQuestion]);
                     if ($currentQuestion) {
                         $answer = Answer::where('question_id', $currentQuestion->id)
                             ->where('text', $text)
@@ -233,8 +231,8 @@ class TelegramBotController extends Controller
     {
         $user->name = $name;
         $user->save();
-        Log::info($name);
-        Log::info($user);
+        Log::info(1, [$name]);
+        Log::info(2, [$user]);
         $this->askForSubscription($chatId);
     }
 
@@ -300,7 +298,6 @@ class TelegramBotController extends Controller
                 'caption' => ""
             ]);
         } catch (Exception $e) {
-            Log::error($e->getMessage());
             $this->telegram->sendMessage([
                 'chat_id' => $chatId,
                 'text' => 'не получилось отправить гифку('
