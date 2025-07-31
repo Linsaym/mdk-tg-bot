@@ -18,7 +18,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
-    Volt::route('bots/trip-vibe-bot.blade', 'bots.trip-vibe-bot')->name('trip-vibe-bot');
+    Volt::route('bot/questions.blade', 'bots.questions')->name('questions');
+    Volt::route('/bot/bot-messages', 'bots.bot-messages.index')->name('bot_messages');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

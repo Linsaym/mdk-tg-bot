@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Answer;
 use App\Models\TravelUser;
 use App\Models\Question;
+use App\Repositories\TelegramMessageRepository;
 use Exception;
 use Telegram\Bot\Api;
 use Illuminate\Http\Request;
@@ -16,8 +17,7 @@ class TelegramBotController extends Controller
 {
     private Api $telegram;
 
-
-    public array $greetings;
+    private TelegramMessageRepository $messageRepository;
 
     // Общая инструкция
     public string $instructions = "\n\nЧто нужно сделать:\n"
@@ -26,15 +26,10 @@ class TelegramBotController extends Controller
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
 
 
-    public function __construct(Api $telegram)
+    public function __construct(Api $telegram, TelegramMessageRepository $messageRepository)
     {
         $this->telegram = $telegram;
-        $this->greetings = config('telegram_messages.greetings');
-    }
-
-    private function getRandomGreetingWithInstructions(): string
-    {
-        return $this->greetings[array_rand($this->greetings)] . $this->instructions;
+        $this->messageRepository = $messageRepository;
     }
 
     /**
@@ -60,7 +55,6 @@ class TelegramBotController extends Controller
         if ($text = $message->text) {
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
-            Log::info('msg', [$message]);
             switch (true) {
                 case $text === "/code":
                     $this->telegram->sendMessage([
@@ -83,7 +77,6 @@ class TelegramBotController extends Controller
                 case $text === "Не про меня":
                 case $text === "По настроению":
                     $currentQuestion = $this->getCurrentQuestion($user);
-                    Log::info('msg', [$currentQuestion]);
                     if ($currentQuestion) {
                         $answer = Answer::where('question_id', $currentQuestion->id)
                             ->where('text', $text)
@@ -97,18 +90,12 @@ class TelegramBotController extends Controller
                     }
                     break;
 
-                case $text === "Начать тест заново":
-                    $this->telegram->sendMessage([
-                        'chat_id' => $chatId,
-                        'text' => "Напиши `/start 123` (вместо 123 код того кто вас пригласил)"
-                    ]);
-                    break;
-
                 case str_starts_with($text, 'Я'):
                     $this->saveUserName($chatId, $user, $text_split[1]);
                     break;
 
                 case !$user->name:
+                case $text === "Начать тест заново":
                     $this->askForName($chatId);
                     break;
 
@@ -138,17 +125,7 @@ class TelegramBotController extends Controller
             return;
         }
 
-        //Спрашиваем подписку
         $this->askForSubscription($chatId);
-        return;
-
-
-//        $this->telegram->sendMessage([
-//            'chat_id' => $chatId,
-//            'text' => $this->getRandomGreetingWithInstructions()
-//        ]);
-//        // Если подписан и имя есть — начинаем тест
-//        $this->sendFirstQuestion($chatId);
     }
 
     /**
@@ -179,18 +156,22 @@ class TelegramBotController extends Controller
                 );
             }
         } else {
-            $this->telegram->sendMessage(
-                [
-                    'chat_id' => $user->telegram_id,
-                    'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.'
-                ]
-            );
-            $this->telegram->sendMessage(
-                [
-                    'chat_id' => $user->telegram_id,
-                    'text' => 'Если же вы с друзьями еще не проходили тест, то давайте приступим — будет интересно!'
-                ]
-            );
+            try {
+                $this->telegram->sendMessage(
+                    [
+                        'chat_id' => $user->telegram_id,
+                        'text' => 'Привет! Если ваш друг уже прошел тест, и у вас есть код друга, просто введите /start 123 (замените 123 на его код), и бот подключит вас к его путешествию.'
+                    ]
+                );
+                $this->telegram->sendMessage(
+                    [
+                        'chat_id' => $user->telegram_id,
+                        'text' => 'Если же вы с друзьями еще не проходили тест, то давайте приступим — будет интересно!'
+                    ]
+                );
+            } catch (TelegramSDKException $e) {
+                return;
+            }
         }
     }
 
@@ -199,9 +180,7 @@ class TelegramBotController extends Controller
      */
     private function askForSubscription($chatId)
     {
-        $messages = config('telegram_messages.ask_for_subscription');
-
-        $randomMessage = $messages[array_rand($messages)];
+        $randomMessage = $this->messageRepository->getRandomMessageFromGroup('ask_for_subscription');;
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
@@ -220,10 +199,8 @@ class TelegramBotController extends Controller
      */
     private function askForName($chatId)
     {
-        $nameRequestMessages = config('telegram_messages.name_request_messages');
-        $welcomeMessages = config('telegram_messages.welcome_messages');
-        $nameRequestMessage = $nameRequestMessages[array_rand($nameRequestMessages)];
-        $welcomeMessage = $welcomeMessages[array_rand($welcomeMessages)];
+        $nameRequestMessage = $this->messageRepository->getRandomMessageFromGroup('name_request_messages');
+        $welcomeMessage = $this->messageRepository->getRandomMessageFromGroup('welcome_messages');
 
 
         $this->telegram->sendMessage([
@@ -256,7 +233,8 @@ class TelegramBotController extends Controller
      */
     private function saveUserName($chatId, TravelUser $user, $name)
     {
-        $user->update(['name' => $name]);
+        $user->name = $name;
+        $user->save();
         $this->askForSubscription($chatId);
     }
 
@@ -276,7 +254,7 @@ class TelegramBotController extends Controller
     {
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => $this->getRandomGreetingWithInstructions(),
+            'text' => $this->messageRepository->getRandomMessageFromGroup('greetings'),
             'reply_markup' => json_encode([
                 'inline_keyboard' => [[['text' => 'Начать тест', 'callback_data' => 'start_test']]]
             ])
@@ -322,7 +300,6 @@ class TelegramBotController extends Controller
                 'caption' => ""
             ]);
         } catch (Exception $e) {
-            Log::error($e->getMessage());
             $this->telegram->sendMessage([
                 'chat_id' => $chatId,
                 'text' => 'не получилось отправить гифку('
@@ -486,8 +463,7 @@ class TelegramBotController extends Controller
 
         // Генерируем реферальную ссылку
         $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $user->telegram_id;
-        $messages = config('telegram_messages.complete_test_message');
-        $randomMsg = $messages[array_rand($messages)];
+        $randomMsg = $this->messageRepository->getRandomMessageFromGroup('complete_test_message');;
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
