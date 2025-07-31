@@ -127,17 +127,7 @@ class TelegramBotController extends Controller
             return;
         }
 
-        //Спрашиваем подписку
         $this->askForSubscription($chatId);
-        return;
-
-
-//        $this->telegram->sendMessage([
-//            'chat_id' => $chatId,
-//            'text' => $this->getRandomGreetingWithInstructions()
-//        ]);
-//        // Если подписан и имя есть — начинаем тест
-//        $this->sendFirstQuestion($chatId);
     }
 
     /**
@@ -241,7 +231,10 @@ class TelegramBotController extends Controller
      */
     private function saveUserName($chatId, TravelUser $user, $name)
     {
-        $user->update(['name' => $name]);
+        $user->name = $name;
+        $user->save();
+        Log::info($name);
+        Log::info($user);
         $this->askForSubscription($chatId);
     }
 
