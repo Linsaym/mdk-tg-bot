@@ -49,6 +49,7 @@ class TestTelegramBotController extends Controller
 
         $update = $this->telegram->getWebhookUpdate();
         $chatId = $update->getChat()?->id;
+        Log::info('123', $update->getChat());
         $message = $update->getMessage();
         $callbackQuery = $update->getCallbackQuery();
 
@@ -93,6 +94,8 @@ class TestTelegramBotController extends Controller
 
     private function handleStartCommand($chatId, $user)
     {
+        //
+
         // Если пользователь уже принял условия
         if ($user->accepted_terms) {
             $this->sendWelcomeBackMessage($chatId);
@@ -353,7 +356,7 @@ class TestTelegramBotController extends Controller
     /**
      * @throws TelegramSDKException
      */
-    private function saveUserName($chatId, TravelUser $user, $name)
+    private function saveUserName($chatId, ContestParticipant $user, $name)
     {
         $user->name = $name;
         $user->save();
