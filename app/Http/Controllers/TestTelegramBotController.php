@@ -415,7 +415,9 @@ class TestTelegramBotController extends Controller
      */
     private function handleSubscriptionCheck($chatId, TravelUser $user)
     {
-        $isSubscribed = $this->checkSubscription($chatId);
+        //$isSubscribed = $this->checkSubscription($chatId);
+        //В тестовом боте юзер всегда подписан
+        $isSubscribed = true;
 
         if ($isSubscribed) {
             $user->update(['is_subscribed' => true]);
