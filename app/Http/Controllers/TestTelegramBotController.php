@@ -11,9 +11,8 @@ use Telegram\Bot\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Exceptions\TelegramSDKException;
-use Telegram\Bot\FileUpload\InputFile;
 
-class TelegramBotController extends Controller
+class TestTelegramBotController extends Controller
 {
     private Api $telegram;
 
@@ -37,8 +36,8 @@ class TelegramBotController extends Controller
      */
     public function handleWebhook(Request $request)
     {
-        // Устанавливаем основную БД
-        config(['database.default' => 'mysql']);
+        // Временное переключение на тестовую БД
+        config(['database.default' => 'mysql_test']);
 
         $update = $this->telegram->getWebhookUpdate();
 
@@ -108,6 +107,9 @@ class TelegramBotController extends Controller
             }
         }
 
+        // Возвращаем настройки обратно (опционально)
+        config(['database.default' => 'mysql']);
+        
         return response()->json(['status' => 'ok']);
     }
 
