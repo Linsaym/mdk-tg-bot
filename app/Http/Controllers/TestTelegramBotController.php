@@ -25,9 +25,15 @@ class TestTelegramBotController extends Controller
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
 
 
+    /**
+     * @throws TelegramSDKException
+     */
     public function __construct(Api $telegram, TelegramMessageRepository $messageRepository)
     {
-        $this->telegram = $telegram;
+        // Используем токен тестового бота
+        $testBotToken = config('telegram.bots.test.token');
+        $this->telegram = new Api($testBotToken);
+
         $this->messageRepository = $messageRepository;
     }
 
@@ -109,7 +115,7 @@ class TestTelegramBotController extends Controller
 
         // Возвращаем настройки обратно (опционально)
         config(['database.default' => 'mysql']);
-        
+
         return response()->json(['status' => 'ok']);
     }
 
