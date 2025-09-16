@@ -100,8 +100,7 @@ class SendLotteryNotification extends Command
         $text = self::MESSAGES[$type] ?? self::MESSAGES['lottery'];
 
         if ($type === 'winners' && $winners) {
-            $text = str_replace('%winners%', $winners, $text);
-            $text = "@linsaym и @diasspra";
+            $text = str_replace('%winners%', "@linsaym и @diasspra", $text);
         }
 
         return $text;

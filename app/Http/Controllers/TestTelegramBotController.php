@@ -69,11 +69,11 @@ class TestTelegramBotController extends Controller
                 case $text === "/start-lottery":
                     $this->sendLotteryNotification();
                     break;
-                case $text === "/winers":
-                    $this->sendWinnersNotification();
-                    break;
                 case $text === "/remind":
                     $this->sendReminderNotification();
+                    break;
+                case $text === "/winers":
+                    $this->sendWinnersNotification();
                     break;
                 case $text === "/code":
                     $this->telegram->sendMessage([
