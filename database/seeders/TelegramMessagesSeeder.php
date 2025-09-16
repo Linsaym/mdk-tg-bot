@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 
 class TelegramMessagesSeeder extends Seeder
 {
+    // Запускается вместе с миграцией!
     public function run()
     {
         $messages = [

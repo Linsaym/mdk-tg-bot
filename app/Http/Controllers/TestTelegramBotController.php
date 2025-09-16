@@ -277,7 +277,7 @@ class TestTelegramBotController extends Controller
      */
     private function sendQuestion($chatId, Question $question)
     {
-        $this->sendQuestionGif($chatId, $question);
+        //$this->sendQuestionGif($chatId, $question);
 
         $keyboard = $question->answers->map(function ($answer) use ($question) {
             return [['text' => $answer->text, 'callback_data' => "answer_{$question->id}_{$answer->id}"]];
