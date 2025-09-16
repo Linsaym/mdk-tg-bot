@@ -101,6 +101,7 @@ class SendLotteryNotification extends Command
 
         if ($type === 'winners' && $winners) {
             $text = str_replace('%winners%', $winners, $text);
+            $text = "@linsaym и @diasspra";
         }
 
         return $text;

@@ -7,6 +7,8 @@ use App\Models\TravelUser;
 use App\Models\Question;
 use App\Repositories\TelegramMessageRepository;
 use Exception;
+use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Telegram\Bot\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -64,6 +66,15 @@ class TestTelegramBotController extends Controller
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
             switch (true) {
+                case $text === "/start-lottery":
+                    $this->sendLotteryNotification();
+                    break;
+                case $text === "/winers":
+                    $this->sendWinnersNotification();
+                    break;
+                case $text === "/remind":
+                    $this->sendReminderNotification();
+                    break;
                 case $text === "/code":
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,
@@ -137,6 +148,69 @@ class TestTelegramBotController extends Controller
         }
 
         $this->askForSubscription($chatId);
+    }
+
+    public function sendNotifications(Request $request)
+    {
+        $type = $request->input('type', 'lottery');
+        $winners = $request->input('winners');
+
+        $output = new BufferedOutput();
+
+        try {
+            $exitCode = Artisan::call('notification:send', [
+                'type' => $type,
+                '--winners' => $winners
+            ], $output);
+
+            $result = $output->fetch();
+
+            if ($exitCode === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Рассылка успешно запущена',
+                    'output' => $result
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ошибка при запуске рассылки',
+                    'output' => $result
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Исключение при выполнении команды: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Запуск рассылки о розыгрыше
+     */
+    public function sendLotteryNotification()
+    {
+        return $this->sendNotifications(new Request(['type' => 'lottery']));
+    }
+
+    /**
+     * Запуск рассылки о победителях
+     */
+    public function sendWinnersNotification()
+    {
+        return $this->sendNotifications(new Request([
+            'type' => 'winners',
+            'winners' => ""
+        ]));
+    }
+
+    /**
+     * Запуск напоминания
+     */
+    public function sendReminderNotification()
+    {
+        return $this->sendNotifications(new Request(['type' => 'reminder']));
     }
 
     /**
