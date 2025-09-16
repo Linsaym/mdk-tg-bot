@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Answer;
-use App\Models\ContestParticipant;
 use App\Models\TravelUser;
 use App\Models\Question;
 use App\Repositories\TelegramMessageRepository;
@@ -41,17 +40,17 @@ class TestTelegramBotController extends Controller
     /**
      * @throws TelegramSDKException
      */
-
     public function handleWebhook(Request $request)
     {
         // Временное переключение на тестовую БД
         config(['database.default' => 'mysql_test']);
 
         $update = $this->telegram->getWebhookUpdate();
+
         $chatId = $update->getChat()?->id;
-        Log::info('123', $update->getChat());
         $message = $update->getMessage();
         $callbackQuery = $update->getCallbackQuery();
+
 
         // Обработка callback-кнопок
         if ($callbackQuery) {
@@ -59,25 +58,53 @@ class TestTelegramBotController extends Controller
             return response()->json(['status' => 'ok']);
         }
 
+
         // Обработка текстовых сообщений
         if ($text = $message->text) {
             $text_split = explode(' ', $text);
-            $user = ContestParticipant::firstOrCreate(['telegram_id' => $chatId]);
-
+            $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
             switch (true) {
                 case $text === "/code":
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,
                         'text' => "Ваш код: `$chatId`"
                     ]);
-                    break;
+                    return response()->json(['status' => 'ok']);
 
                 case str_starts_with($text, '/start'):
-                    $this->handleStartCommand($chatId, $user);
+                    $this->handleStartCommand($chatId, $user, $text);
+                    break;
+
+                case $text === "Пригласить другого друга":
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Просто отправь ему свой код: `$chatId`"
+                    ]);
+                    break;
+                case $text === "Про меня":
+                case $text === "Не про меня":
+                case $text === "По настроению":
+                    $currentQuestion = $this->getCurrentQuestion($user);
+                    if ($currentQuestion) {
+                        $answer = Answer::where('question_id', $currentQuestion->id)
+                            ->where('text', $text)
+                            ->first();
+
+                        if ($answer) {
+                            $this->handleTextAnswer($chatId, $user, $currentQuestion, $answer);
+                        }
+                    } else {
+                        $this->sendHintMessage($chatId);
+                    }
                     break;
 
                 case str_starts_with($text, 'Я'):
                     $this->saveUserName($chatId, $user, $text_split[1]);
+                    break;
+
+                case !$user->name:
+                case $text === "Начать тест заново":
+                    $this->askForName($chatId);
                     break;
 
                 default:
@@ -86,185 +113,30 @@ class TestTelegramBotController extends Controller
             }
         }
 
-        // Возвращаем настройки обратно
+        // Возвращаем настройки обратно (опционально)
         config(['database.default' => 'mysql']);
 
         return response()->json(['status' => 'ok']);
     }
 
-    private function handleStartCommand($chatId, $user)
+    /**
+     * @throws TelegramSDKException
+     */
+    private function handleStartCommand($chatId, TravelUser $user, $commandText)
     {
-        //
+        // Парсим параметры из команды /start
+        $this->processInvitation($user, $commandText);
 
-        // Если пользователь уже принял условия
-        if ($user->accepted_terms) {
-            $this->sendWelcomeBackMessage($chatId);
-        } else {
-            // Отправляем сообщение с кнопкой принятия условий
-            $this->sendTermsAcceptanceMessage($chatId);
-        }
-    }
+        // Проверка подписки
+        $isSubscribed = $this->checkSubscription($chatId);
 
-    private function sendTermsAcceptanceMessage($chatId)
-    {
-        $welcomeTexts = [
-            "✨ Перед тем как продолжить участие, примите условия конкурса. Нажмите кнопку «Принять», чтобы подтвердить участие и сохранить свой шанс на 50 000 Ozon-баллов.",
-            "✨ Чтобы ваш билет удачи остался активным — подтвердите участие! Жмите «Принять» и оставайтесь в игре за 100 000 Ozon-баллов на двоих — для вас и вашей тревел-половинки."
-        ];
-
-        $keyboard = [
-            'inline_keyboard' => [
-                [
-                    [
-                        'text' => '✅ Принять условия конкурса',
-                        'callback_data' => 'accept_terms'
-                    ]
-                ]
-            ]
-        ];
-
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => $welcomeTexts[array_rand($welcomeTexts)],
-            'reply_markup' => json_encode($keyboard)
-        ]);
-    }
-
-    private function handleCallbackQuery($callbackQuery)
-    {
-        $chatId = $callbackQuery->getMessage()->getChat()->id;
-        $data = $callbackQuery->getData();
-
-        switch ($data) {
-            case 'accept_terms':
-                $this->acceptTerms($chatId);
-                break;
-        }
-
-        // Ответ на callback query
-        $this->telegram->answerCallbackQuery([
-            'callback_query_id' => $callbackQuery->getId()
-        ]);
-    }
-
-    private function acceptTerms($chatId)
-    {
-        $user = ContestParticipant::where('telegram_id', $chatId)->first();
-
-        if ($user) {
-            $user->accepted_terms = true;
-            $user->accepted_terms_at = now();
-            $user->save();
-
-            // Отправляем приветственное сообщение
-            $welcomeMessages = [
-                "🎉 Добро пожаловать в розыгрыш Ozon Travel Vibe!\n\nС 1 по 30 сентября мы проводим сразу два розыгрыша по 500 000 Ozon-баллов. В каждом розыгрыше мы случайным образом выбираем 5 пар (10 победителей), и каждый из них получает по 50 000 баллов.\n\nПриглашайте друзей, проходите тесты и увеличивайте свои шансы! 🚀",
-                "✨ А вы готовы поймать удачу? Ozon Travel Vibe разыгрывает 1 000 000 Ozon-баллов целый месяц до 7 октября!\n\nКаждые две недели выбираем 5 пар участников. Каждому победителю — по 50 000 баллов.\n\nУдвойте. Утройте! Учетверите! Шансы на победу — зовите участвовать всех, кто не меньше вас заслужил отдых!"
-            ];
-
-            $this->telegram->sendMessage([
-                'chat_id' => $chatId,
-                'text' => $welcomeMessages[array_rand($welcomeMessages)]
-            ]);
-
-            // Напоминание о приглашении друзей
-            $this->sendInviteReminder($chatId);
-        }
-    }
-
-    private function sendInviteReminder($chatId)
-    {
-        $reminderTexts = [
-            "🔥 Напоминаем: чтобы участвовать в розыгрыше и увеличить шансы, пригласите ещё друзей в Ozon Travel Vibe! Каждый новый друг — это дополнительный шанс стать победителем и получить 50 000 Ozon-баллов. 🚀",
-            "🔥 Больше друзей — больше шансов! Не упустите возможность: приглашайте знакомых в Ozon Travel Vibe и расширяйте свои шансы на выигрыш 100 000 Ozon-баллов на двоих. 🚀"
-        ];
-
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => $reminderTexts[array_rand($reminderTexts)]
-        ]);
-    }
-
-    private function sendWelcomeBackMessage($chatId)
-    {
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => "С возвращением! Вы уже участвуете в розыгрыше. 🎉"
-        ]);
-    }
-
-    private function sendHintMessage($chatId)
-    {
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => "Используйте команды бота для взаимодействия. Для начала работы используйте /start"
-        ]);
-    }
-
-// Метод для выбора победителей (запускается по расписанию)
-    public function selectWinners()
-    {
-        $currentContest = Contest::where('is_active', true)->first();
-
-        if (!$currentContest) {
+        // Если имя не указанно
+        if (!$user->name) {
+            $this->askForName($chatId);
             return;
         }
 
-        // Выбираем 10 случайных участников, принявших условия
-        $winners = ContestParticipant::where('accepted_terms', true)
-            ->inRandomOrder()
-            ->limit(10)
-            ->get();
-
-        foreach ($winners as $winner) {
-            // Генерируем уникальный код
-            $prizeCode = strtoupper(substr(md5(uniqid()), 0, 10));
-
-            // Сохраняем победителя
-            Winner::create([
-                'contest_id' => $currentContest->id,
-                'participant_id' => $winner->id,
-                'prize_code' => $prizeCode,
-                'prize_amount' => 50000
-            ]);
-
-            // Отправляем сообщение победителю
-            $winnerMessages = [
-                "🥳 Поздравляем! Вы стали победителем розыгрыша Ozon Travel Vibe.\n\nВаш приз — 50 000 Ozon-баллов. Вот ваш уникальный код: $prizeCode.\n\nСпасибо, что участвуете вместе с нами! 💙",
-                "Ура! Вам улыбнулась удача в Ozon Travel Vibe. 🎉\n\nВы выиграли 50 000 Ozon-баллов! Ваш призовой код: $prizeCode.\n\nЖелаем приятных путешествий и новых побед! 💙"
-            ];
-
-            $this->telegram->sendMessage([
-                'chat_id' => $winner->telegram_id,
-                'text' => $winnerMessages[array_rand($winnerMessages)]
-            ]);
-        }
-
-        // Отправляем уведомление всем участникам
-        $this->sendWinnerAnnouncement($winners);
-    }
-
-    private function sendWinnerAnnouncement($winners)
-    {
-        $winnerList = "";
-        foreach ($winners as $winner) {
-            $winnerList .= "@{$winner->username}\n";
-        }
-
-        $announcementTexts = [
-            "Итоги розыгрыша Ozon Travel Vibe подведены! 🎉\n\nПоздравляем наших победителей:\n$winnerList\nНе расстраивайтесь, если удача пока не улыбнулась — впереди ещё розыгрыши. Оставайтесь подписанными на канал, чтобы снова испытать удачу! 💙",
-            "🎉 Розыгрыш завершён, и у нас есть счастливчики!\n\n$winnerList\nКаждый получил по 50 000 Ozon-баллов. А уже скоро стартует новый розыгрыш — оставайтесь в Ozon Travel Vibe и ловите шанс на победу снова! 💙"
-        ];
-
-        // Получаем всех участников
-        $participants = ContestParticipant::where('accepted_terms', true)->get();
-
-        foreach ($participants as $participant) {
-            $this->telegram->sendMessage([
-                'chat_id' => $participant->telegram_id,
-                'text' => $announcementTexts[array_rand($announcementTexts)]
-            ]);
-        }
+        $this->askForSubscription($chatId);
     }
 
     /**
@@ -353,10 +225,24 @@ class TestTelegramBotController extends Controller
         ]);
     }
 
+    private function checkSubscription($chatId)
+    {
+        try {
+            $response = $this->telegram->getChatMember([
+                'chat_id' => '@ozontravel_official',
+                'user_id' => $chatId
+            ]);
+            return in_array($response->status, ['member', 'administrator', 'creator']);
+        } catch (Exception $e) {
+            Log::error("Ошибка проверки подписки: " . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * @throws TelegramSDKException
      */
-    private function saveUserName($chatId, ContestParticipant $user, $name)
+    private function saveUserName($chatId, TravelUser $user, $name)
     {
         $user->name = $name;
         $user->save();
@@ -474,6 +360,42 @@ class TestTelegramBotController extends Controller
     /**
      * @throws TelegramSDKException
      */
+    private function handleCallbackQuery($callbackQuery)
+    {
+        $chatId = $callbackQuery->getMessage()->getChat()->id;
+        $messageId = $callbackQuery->getMessage()->getMessageId(); // Получаем ID сообщения
+        $callbackQueryId = $callbackQuery->getId();
+        $data = $callbackQuery->data;
+
+        // Всегда отвечаем на callback, чтобы убрать "часики"
+        $this->telegram->answerCallbackQuery([
+            'callback_query_id' => $callbackQueryId
+        ]);
+
+        $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
+
+        switch ($data) {
+            case 'check_subscription':
+                $this->handleSubscriptionCheck($chatId, $user);
+                break;
+
+            case 'start_test':
+                $user->update(['test_answers' => null]);
+                $this->sendFirstQuestion($chatId);
+                break;
+
+            case 'restart_test':
+                $this->askForName($chatId);
+                break;
+
+            default:
+                if (str_starts_with($data, 'answer_')) {
+                    $this->removeInlineButtons($chatId, $messageId);
+                    $this->handleAnswer($chatId, $data, $user);
+                }
+                break;
+        }
+    }
 
     private function removeInlineButtons($chatId, $messageId)
     {
@@ -694,5 +616,26 @@ class TestTelegramBotController extends Controller
                 Log::error("Ошибка при отправке результата совместимости: " . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    private function sendHintMessage($chatId)
+    {
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => "Хо-хо, не могу понять что вы пишете! 😅 Лучше используйте кнопки для взаимодействия со мной.",
+            'reply_markup' => json_encode([
+                'keyboard' => [
+                    [
+                        ['text' => 'Начать тест заново', 'callback_data' => 'restart_test'],
+                        ['text' => 'Пригласить другого друга', 'switch_inline_query' => "start"],
+                    ]
+                ],
+                'resize_keyboard' => true,
+                'one_time_keyboard' => true
+            ])
+        ]);
     }
 }
