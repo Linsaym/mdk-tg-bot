@@ -15,7 +15,7 @@ class SetTelegramWebhook extends Command
 
     protected $description = 'Установка или обновление вебхука Telegram бота';
 
-    public function handle()
+    public function handle(): int
     {
         $botName = $this->option('bot') ?: config('telegram.default');
         $botConfig = config("telegram.bots.{$botName}");
@@ -71,7 +71,6 @@ class SetTelegramWebhook extends Command
 
             $this->error('❌ Неизвестная ошибка: API Telegram вернуло false');
             return 1;
-
         } catch (\Exception $e) {
             $this->newLine();
             $this->error("❌ Ошибка: " . $e->getMessage());
