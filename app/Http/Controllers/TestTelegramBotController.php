@@ -452,11 +452,13 @@ class TestTelegramBotController extends Controller
             case 'accept_terms':
                 $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
                 $this->sendFirstQuestion($chatId);
+                $this->removeInlineButtons($chatId, $messageId);
                 break;
             case 'skip_lottery':
                 $user->update(['test_answers' => null]);
                 $user->update(['participate_in_lottery' => false, 'test_answers' => null]);
                 $this->sendFirstQuestion($chatId);
+                $this->removeInlineButtons($chatId, $messageId);
                 break;
             case 'check_subscription':
                 $this->handleSubscriptionCheck($chatId, $user);
