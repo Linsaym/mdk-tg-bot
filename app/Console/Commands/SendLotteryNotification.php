@@ -11,8 +11,25 @@ use Telegram\Bot\Exceptions\TelegramSDKException;
 
 class SendLotteryNotification extends Command
 {
-    protected $signature = 'notification:lottery-start';
+    protected $signature = 'notification:send {type=lottery} {--winners=}';
     protected $description = 'Отправляет уведомление о начале розыгрыша всем пользователям';
+
+    const MESSAGES = [
+        'lottery' => "
+    ✨ А вы готовы поймать удачу? Ozon Travel Vibe разыгрывает 1 000 000 Ozon-баллов целый месяц до 7 октября!\n\n
+    Каждые две недели выбираем 5 пар участников. Каждому победителю — по 50 000 баллов.\n\n
+    Удвойте. Утройте! Учетверите! Шансы на победу — зовите участвовать всех, кто не меньше вас заслужил отдых!\n\n
+    Как воспользоваться призом? Можно отправиться вместе в путешествие, затариться едой на Ozon Fresh для праздничной вечеринки в честь победы или купить что-то классное на Ozon💙
+    ",
+        'winners' => "
+    🎊 Поздравляем победителей розыгрыша от Ozon Travel Vibe!\n\n
+    Список счастливчиков: %winners%\n\n
+    Каждый победитель получает по 50 000 Ozon-баллов! 🎉\n\n
+    Следующий розыгрыш уже скоро - не упустите свой шанс!
+    ",
+        'reminder' => "🔥 Напоминаем: чтобы участвовать в розыгрыше и увеличить шансы, пригласите ещё друзей в Ozon Travel Vibe! Каждый новый друг — это дополнительный шанс стать победителем и получить 50 000 Ozon-баллов. 🚀
+    "
+    ];
 
     /**
      * @throws TelegramSDKException
@@ -25,6 +42,12 @@ class SendLotteryNotification extends Command
         $telegram = new Api($testBotToken);
         $successCount = 0;
         $errorCount = 0;
+
+        $messageType = $this->argument('type');
+        $winners = $this->option('winners');
+
+        // Получите текст сообщения
+        $messageText = $this->getMessageText($messageType, $winners);
 
         // Получаем только telegram_id для экономии памяти
         $telegramIds = TravelUser::whereNotNull('telegram_id')
@@ -41,7 +64,7 @@ class SendLotteryNotification extends Command
                 try {
                     $telegram->sendMessage([
                         'chat_id' => $telegramId,
-                        'text' => '🎉 Начался розыгрыш! Участвуйте и выигрывайте призы! 🎊',
+                        'text' => $messageText,
                         'parse_mode' => 'HTML'
                     ]);
 
@@ -65,7 +88,7 @@ class SendLotteryNotification extends Command
         $this->info("Рассылка завершена! Успешно: {$successCount}, Ошибок: {$errorCount}");
     }
 
-    protected function handleError($exception, $telegramId)
+    protected function handleError($exception, $telegramId): void
     {
         $errorMessage = "Ошибка для пользователя {$telegramId}: " . $exception->getMessage();
         $this->error($errorMessage);
@@ -76,5 +99,16 @@ class SendLotteryNotification extends Command
             TravelUser::where('telegram_id', $telegramId)->update(['telegram_id' => null]);
             $this->warn("Пользователь заблокировал бота, telegram_id обнулен");
         }
+    }
+
+    protected function getMessageText(string $type, ?string $winners = null): string
+    {
+        $text = self::MESSAGES[$type] ?? self::MESSAGES['lottery'];
+
+        if ($type === 'winners' && $winners) {
+            $text = str_replace('%winners%', $winners, $text);
+        }
+
+        return $text;
     }
 }
