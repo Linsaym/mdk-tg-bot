@@ -66,7 +66,7 @@ class TestTelegramBotController extends Controller
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
             switch (true) {
-                case $text === "/start-lottery":
+                case $text === "/start_lottery":
                     $this->sendLotteryNotification();
                     break;
                 case $text === "/remind":
