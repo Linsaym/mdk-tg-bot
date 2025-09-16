@@ -470,7 +470,7 @@ class TestTelegramBotController extends Controller
                 if ($user->participate_in_lottery) {
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,
-                        'text' => "Вы уже участник, дважды не прокатит 😅"
+                        'text' => "Вы уже участвуете в розыгрыше, а если хотите увеличить шансы — пригласите друзей 😉"
                     ]);
                 } else {
                     $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
