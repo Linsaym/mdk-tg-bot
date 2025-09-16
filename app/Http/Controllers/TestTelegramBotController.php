@@ -458,7 +458,7 @@ class TestTelegramBotController extends Controller
             case 'participate':
                 $this->telegram->sendMessage([
                     'chat_id' => $chatId,
-                    'text' => "✨ Перед тем как продолжить участие, примите условия конкурса. Нажмите кнопку «Принять», чтобы подтвердить участие и сохранить свой шанс на 50 000 Ozon-баллов.",
+                    'text' => "✨ Перед тем как продолжить участие, примите <a href='https://mdk.is/'>условия конкурса</a>. Нажмите кнопку «Принять», чтобы подтвердить участие и сохранить свой шанс на 50 000 Ozon-баллов.",
                     'parse_mode' => 'HTML',
                     'reply_markup' => json_encode([
                         'inline_keyboard' => [
