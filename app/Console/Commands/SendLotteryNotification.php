@@ -65,16 +65,10 @@ class SendLotteryNotification extends Command
                                 'inline_keyboard' => [
                                     [
                                         [
-                                            'text' => '✅ Принять условия',
-                                            'callback_data' => 'accept_terms'
+                                            'text' => '🎉 Участвовать',
+                                            'callback_data' => 'participate'
                                         ],
                                     ],
-                                    [
-                                        [
-                                            'text' => '💔 Пропустить и пройти тест',
-                                            'callback_data' => 'skip_lottery'
-                                        ]
-                                    ]
                                 ]
                             ])
                         ]);

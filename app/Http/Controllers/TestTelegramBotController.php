@@ -449,10 +449,36 @@ class TestTelegramBotController extends Controller
         $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
 
         switch ($data) {
+            case 'participate':
+                $this->telegram->sendMessage([
+                    'chat_id' => $chatId,
+                    'text' => "✨ Перед тем как продолжить участие, примите условия конкурса. Нажмите кнопку «Принять», чтобы подтвердить участие и сохранить свой шанс на 50 000 Ozon-баллов.",
+                    'parse_mode' => 'HTML',
+                    'reply_markup' => json_encode([
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => '✅ Принять условия',
+                                    'callback_data' => 'accept_terms'
+                                ],
+                            ],
+                        ]
+                    ])
+                ]);
+                break;
             case 'accept_terms':
-                $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
-                $this->sendFirstQuestion($chatId);
-                //$this->removeInlineButtons($chatId, $messageId);
+                if ($user->participate_in_lottery) {
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Вы уже участник, дважды не прокатит 😅"
+                    ]);
+                } else {
+                    $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Вы участвуете в розыгрыше! 🎉"
+                    ]);
+                }
                 break;
             case 'skip_lottery':
                 $user->update(['participate_in_lottery' => false, 'test_answers' => null]);
@@ -583,6 +609,24 @@ class TestTelegramBotController extends Controller
 
         // Проверяем связи приглашения
         $this->checkInvitationRelationships($user);
+
+        if (!$user->participate_in_lottery) {
+            $this->telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => "✨ А вы готовы поймать удачу? Ozon Travel Vibe разыгрывает 1 000 000 Ozon-баллов целый месяц до 7 октября!\n\nКаждые две недели выбираем 5 пар участников. Каждому победителю — по 50 000 баллов.\n\nУдвойте. Утройте! Учетверите! Шансы на победу — зовите участвовать всех, кто не меньше вас заслужил отдых!\n\nКак воспользоваться призом? Можно отправиться вместе в путешествие, затариться едой на Ozon Fresh для праздничной вечеринки или купить что-то классное на Ozon💙",
+                'parse_mode' => 'HTML',
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => [
+                        [
+                            [
+                                'text' => '🎉 Участвовать',
+                                'callback_data' => 'participate'
+                            ],
+                        ],
+                    ]
+                ])
+            ]);
+        }
     }
 
     /**

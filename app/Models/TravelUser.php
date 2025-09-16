@@ -14,7 +14,10 @@ class TravelUser extends Model
         'name',
         'test_answers',
         'is_subscribed',
-        'invited_by'
+        'invited_by',
+        'first_friend_id',
+        'invited_friends_count',
+        'participate_in_lottery',
     ];
     protected $casts = [
         'test_answers' => 'array', // Автоматическая конвертация JSON ↔ массив
@@ -32,7 +35,9 @@ class TravelUser extends Model
 
     public function hasCompletedTest(): bool
     {
-        if (!$this->test_answers) return false;
+        if (!$this->test_answers) {
+            return false;
+        }
 
         $answers = json_decode($this->test_answers, true);
         return count($answers) === Question::count();
