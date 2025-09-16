@@ -56,11 +56,34 @@ class SendLotteryNotification extends Command
         foreach ($telegramIds->chunk($batchSize) as $chunk) {
             foreach ($chunk as $telegramId) {
                 try {
-                    $telegram->sendMessage([
-                        'chat_id' => $telegramId,
-                        'text' => $messageText,
-                        'parse_mode' => 'HTML'
-                    ]);
+                    if ($messageType == 'lottery') {
+                        $telegram->sendMessage([
+                            'chat_id' => $telegramId,
+                            'text' => $messageText,
+                            'parse_mode' => 'HTML',
+                            'reply_markup' => json_encode([
+                                'inline_keyboard' => [
+                                    [
+                                        [
+                                            'text' => '✅ Принять условия',
+                                            'callback_data' => 'accept_terms'
+                                        ],
+                                        [
+                                            'text' => '💔 Пропустить и пройти тест',
+                                            'callback_data' => 'skip_lottery'
+                                        ]
+                                    ]
+                                ]
+                            ])
+                        ]);
+                    } else {
+                        $telegram->sendMessage([
+                            'chat_id' => $telegramId,
+                            'text' => $messageText,
+                            'parse_mode' => 'HTML'
+                        ]);
+                    }
+
 
                     $successCount++;
                     $this->info("Отправлено: {$telegramId}");

@@ -449,6 +449,15 @@ class TestTelegramBotController extends Controller
         $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
 
         switch ($data) {
+            case 'accept_terms':
+                $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
+                $this->sendFirstQuestion($chatId);
+                break;
+            case 'skip_lottery':
+                $user->update(['test_answers' => null]);
+                $user->update(['participate_in_lottery' => false, 'test_answers' => null]);
+                $this->sendFirstQuestion($chatId);
+                break;
             case 'check_subscription':
                 $this->handleSubscriptionCheck($chatId, $user);
                 break;
