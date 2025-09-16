@@ -359,7 +359,7 @@ class TestTelegramBotController extends Controller
 
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "❓ Вопрос " . $question->id . ": " . $question->text,
+            'text' => "❓ Вопрос " . $question->question_number . ": " . $question->text,
             'reply_markup' => json_encode([
                 'keyboard' => $keyboard,
                 'resize_keyboard' => true,
