@@ -68,8 +68,10 @@ class SendLotteryNotification extends Command
                                             'text' => '✅ Принять условия',
                                             'callback_data' => 'accept_terms'
                                         ],
+                                    ],
+                                    [
                                         [
-                                            'text' => '💔 Пропустить и розыгрыш',
+                                            'text' => '💔 Пропустить и пройти тест',
                                             'callback_data' => 'skip_lottery'
                                         ]
                                     ]
