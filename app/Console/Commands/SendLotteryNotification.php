@@ -71,7 +71,6 @@ class SendLotteryNotification extends Command
                             'chat_id' => $telegramId,
                             'text' => $messageText,
                             'parse_mode' => 'HTML',
-                            'link_preview_options' => ['is_disabled' => true],
                             'reply_markup' => json_encode([
                                 'inline_keyboard' => [
                                     [
@@ -87,6 +86,7 @@ class SendLotteryNotification extends Command
                         $telegram->sendMessage([
                             'chat_id' => $telegramId,
                             'text' => $messageText,
+                            'link_preview_options' => ['is_disabled' => true],
                             'parse_mode' => 'HTML'
                         ]);
                     }
