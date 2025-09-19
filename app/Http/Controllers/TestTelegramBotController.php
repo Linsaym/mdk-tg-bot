@@ -466,7 +466,7 @@ class TestTelegramBotController extends Controller
                     'text' => "
                     ✨Чтобы ваш билет удачи остался активным — подтвердите участие! Жмите «Принять» и&#160;оставайтесь в&#160;игре за&#160;100&#160;000 Ozon-баллов на&#160;двоих — для вас и&#160;вашей тревел-половинки.\n
 \n
-<a href='https://t.me/+ogpsfRbwbSBkZTg6'>подтвердите участие</a>
+<a href='https://ozon.ru/t/OM4oXCz'>подтвердите участие</a>
                     ",
                     'parse_mode' => 'HTML',
                     'reply_markup' => json_encode([
