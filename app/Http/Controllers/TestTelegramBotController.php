@@ -481,9 +481,22 @@ class TestTelegramBotController extends Controller
                 break;
             case 'accept_terms':
                 if ($user->participate_in_lottery) {
+                    $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $chatId;
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,
-                        'text' => "Вы уже участвуете в розыгрыше, а если хотите увеличить шансы — пригласите друзей 😉"
+                        'text' => "Вы уже участвуете в розыгрыше, а если хотите увеличить шансы — пригласите друзей 😉",
+                        'reply_markup' => json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => 'Поделиться с друзьями',
+                                        'url' => "https://t.me/share/url?text=" . rawurlencode(
+                                                "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
+                                            ) . "&url=" . urlencode($refLink)
+                                    ]
+                                ]
+                            ]
+                        ])
                     ]);
                 } else {
                     $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
