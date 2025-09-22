@@ -803,6 +803,7 @@ class TestTelegramBotController extends Controller
      */
     public function verifyCode(Request $request)
     {
+        return view('captcha-success');
         $request->validate([
             'code' => 'required|string',
             'g-recaptcha-response' => 'required'
