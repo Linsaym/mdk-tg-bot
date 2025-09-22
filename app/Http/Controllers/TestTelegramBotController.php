@@ -808,6 +808,8 @@ class TestTelegramBotController extends Controller
             'g-recaptcha-response' => 'required'
         ]);
 
+        $code = $request->input('code');
+
         // Проверка reCAPTCHA
         $recaptchaResponse = $request->input('g-recaptcha-response');
         $secretKey = '6Ld7S9ErAAAAAB6Hn4ISaDlUSPWA12kfG0Hu3YGg';
@@ -819,12 +821,11 @@ class TestTelegramBotController extends Controller
 
         $responseKeys = json_decode($response, true);
 
+        Log::info('Код, ключи успеха, секрет код', [$code, $responseKeys["success"], $responseKeys]);
+
         if (intval($responseKeys["success"]) !== 1) {
             return back()->with('error', 'Ошибка проверки reCAPTCHA');
         }
-
-        // Здесь добавьте вашу логику проверки кода
-        $code = $request->input('code');
 
         if (!$code) {
             return back()->with('error', 'Ошибка, попробуйте снова чуть позже');
