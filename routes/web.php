@@ -1,17 +1,17 @@
 <?php
 
+use App\Http\Controllers\TestTelegramBotController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::view('/', 'welcome')->name('home');
+Route::get('/verification', [TestTelegramBotController::class, 'showForm'])->name('verification.form');
+Route::post('/verify-code', [TestTelegramBotController::class, 'verifyCode'])->name('verify.code');
 
 Route::middleware(['auth'])->group(function () {
+    Route::view('dashboard-x4', 'dashboard')->name('dashboard');
+
     Route::redirect('settings', 'settings/profile');
 
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');

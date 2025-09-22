@@ -792,4 +792,41 @@ class TestTelegramBotController extends Controller
             ])
         ]);
     }
+
+    public function showForm()
+    {
+        return view('captcha');
+    }
+
+    public function verifyCode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'g-recaptcha-response' => 'required'
+        ]);
+
+        // Проверка reCAPTCHA
+        $recaptchaResponse = $request->input('g-recaptcha-response');
+        $secretKey = '6Ld7S9ErAAAAAB6Hn4ISaDlUSPWA12kfG0Hu3YGg';
+
+        $response = file_get_contents(
+            "https://www.google.com/recaptcha/api/siteverify?secret=" .
+            $secretKey . "&response=" . $recaptchaResponse
+        );
+
+        $responseKeys = json_decode($response, true);
+
+        if (intval($responseKeys["success"]) !== 1) {
+            return back()->with('error', 'Ошибка проверки reCAPTCHA');
+        }
+
+        // Здесь добавьте вашу логику проверки кода
+        $code = $request->input('code');
+
+        if ($code === '123') {
+            return back()->with('success', 'Код верный!');
+        }
+
+        return back()->with('error', 'Неверный код');
+    }
 }
