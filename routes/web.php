@@ -6,8 +6,9 @@ use Livewire\Volt\Volt;
 
 
 Route::view('/', 'welcome')->name('home');
-Route::get('/verification', [TestTelegramBotController::class, 'showForm'])->name('verification.form');
+Route::view('/verification', 'captcha')->name('verification.form');
 Route::post('/verify-code', [TestTelegramBotController::class, 'verifyCode'])->name('verify.code');
+Route::view('/success', 'captcha-success')->name('captcha-success');
 
 Route::middleware(['auth'])->group(function () {
     Route::view('dashboard-x4', 'dashboard')->name('dashboard');

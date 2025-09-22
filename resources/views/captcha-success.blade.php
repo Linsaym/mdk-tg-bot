@@ -3,22 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Проверка reCAPTCHA</title>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-
-            if (code) {
-                document.getElementById('hiddenCode').value = code;
-            } else {
-                document.getElementById('telegramMessage').classList.remove('hidden');
-                document.getElementById('codeForm').classList.add('hidden');
-                document.querySelector('.g-recaptcha').style.display = 'none';
-            }
-        });
-    </script>
+    <title>Успех!</title>
     <style>
         body {
             background-color: #1b1b18;
@@ -120,52 +105,8 @@
 </head>
 <body>
 <div class="container">
-    <h1>Проверка безопасности</h1>
-    <div id="telegramMessage" class="hidden">
-        <p style="text-align: center; color: #ff6b6b;">
-            Пожалуйста, откройте эту страницу через Telegram-бота для получения кода доступа.
-        </p>
-    </div>
-    <div class="recaptcha-container">
-        <div class="g-recaptcha"
-             data-sitekey="6Ld7S9ErAAAAAMkcWLORzZSwPKr4W3jvVZQLngF2"
-             data-callback="onCaptchaSuccess"
-             data-expired-callback="onCaptchaExpired"
-             data-error-callback="onCaptchaError"></div>
-    </div>
-
-    <form id="codeForm" class="hidden" method="POST" action="{{ route('verify.code') }}">
-        @csrf
-        <input type="hidden" id="hiddenCode" name="code">
-        <button type="submit">Подтвердить человечность</button>
-    </form>
-
-    @if(session('error'))
-        <div class="error">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    @if(session('success'))
-        <div class="success">
-            {{ session('success') }}
-        </div>
-    @endif
+    <h1>Успех!</h1>
+    <div>Вы прошли капчу!</div>
 </div>
-
-<script>
-    function onCaptchaSuccess(response) {
-        document.getElementById('codeForm').classList.remove('hidden');
-    }
-
-    function onCaptchaExpired() {
-        document.getElementById('codeForm').classList.add('hidden');
-        grecaptcha.reset();
-    }
-
-    function onCaptchaError() {
-        document.getElementById('codeForm').classList.add('hidden');
-    }
-</script>
 </body>
 </html>

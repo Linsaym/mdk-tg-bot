@@ -499,11 +499,16 @@ class TestTelegramBotController extends Controller
                         ])
                     ]);
                 } else {
-                    $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,
-                        'text' => "Вы участвуете в розыгрыше! 🎉"
+                        'text' => "Последний шаг: <a href='https://mdk-bots.ru/verification?code=$chatId'>пройдите капчу</a> — и вы в конкурсе! 🎉",
+                        'parse_mode' => 'HTML',
                     ]);
+//                    $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
+//                    $this->telegram->sendMessage([
+//                        'chat_id' => $chatId,
+//                        'text' => "Вы участвуете в розыгрыше! 🎉"
+//                    ]);
                 }
                 break;
             case 'skip_lottery':
@@ -793,11 +798,9 @@ class TestTelegramBotController extends Controller
         ]);
     }
 
-    public function showForm()
-    {
-        return view('captcha');
-    }
-
+    /**
+     * @throws TelegramSDKException
+     */
     public function verifyCode(Request $request)
     {
         $request->validate([
@@ -823,10 +826,20 @@ class TestTelegramBotController extends Controller
         // Здесь добавьте вашу логику проверки кода
         $code = $request->input('code');
 
-        if ($code === '123') {
-            return back()->with('success', 'Код верный!');
+        if (!$code) {
+            return back()->with('error', 'Ошибка, попробуйте снова чуть позже');
         }
 
-        return back()->with('error', 'Неверный код');
+        $user = TravelUser::firstOrFail(['telegram_id' => $code]);
+
+        $user->update(['participate_in_lottery' => true]);
+
+        $this->telegram->sendMessage([
+            'chat_id' => $code,
+            'text' => "Поздравляем! 🎊 \nВы успешно прошли капчу и теперь участвуете в конкурсе. Удачи! 🍀",
+            'parse_mode' => 'HTML',
+        ]);
+
+        return view('captcha-success');
     }
 }
