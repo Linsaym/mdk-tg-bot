@@ -816,7 +816,7 @@ class TestTelegramBotController extends Controller
         $user->update(['participate_in_lottery' => true]);
         $this->telegram->sendMessage([
             'chat_id' => $code,
-            'text' => "Поздравляем! 🎊 \nВы успешно прошли капчу и теперь участвуете в конкурсе. Удачи! 🍀",
+            'text' => "Поздравляем! \nВы участвуете в конкурсе. Удачи!🍀",
             'parse_mode' => 'HTML',
         ]);
         return view('captcha-success');
