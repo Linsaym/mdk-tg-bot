@@ -804,7 +804,7 @@ class TestTelegramBotController extends Controller
     public function verifyCode(Request $request)
     {
         $code = $request->input('code');
-        $user = TravelUser::firstOrFail(['telegram_id' => $code]);
+        $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
         $user->update(['participate_in_lottery' => true]);
         $this->telegram->sendMessage([
             'chat_id' => $code,
@@ -840,7 +840,7 @@ class TestTelegramBotController extends Controller
             return back()->with('error', 'Ошибка, попробуйте снова чуть позже');
         }
 
-        $user = TravelUser::firstOrFail(['telegram_id' => $code]);
+        $user = $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
 
         $user->update(['participate_in_lottery' => true]);
 
