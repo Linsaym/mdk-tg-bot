@@ -803,6 +803,14 @@ class TestTelegramBotController extends Controller
      */
     public function verifyCode(Request $request)
     {
+        $code = $request->input('code');
+        $user = TravelUser::firstOrFail(['telegram_id' => $code]);
+        $user->update(['participate_in_lottery' => true]);
+        $this->telegram->sendMessage([
+            'chat_id' => $code,
+            'text' => "Поздравляем! 🎊 \nВы успешно прошли капчу и теперь участвуете в конкурсе. Удачи! 🍀",
+            'parse_mode' => 'HTML',
+        ]);
         return view('captcha-success');
         $request->validate([
             'code' => 'required|string',

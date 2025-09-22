@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Успех!</title>
     <style>
+        .success-message {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid rgba(76, 175, 80, 0.2);
+            border-radius: 8px;
+            background: rgba(76, 175, 80, 0.1) linear-gradient(45deg, #4CAF50, #45a049);
+        }
+
         body {
             background-color: #1b1b18;
             color: #ffffff;
@@ -106,7 +120,7 @@
 <body>
 <div class="container">
     <h1>Успех!</h1>
-    <div>Вы прошли капчу!</div>
+    <div class="success-message" style="color: white">Вы прошли капчу🎉</div>
 </div>
 </body>
 </html>
