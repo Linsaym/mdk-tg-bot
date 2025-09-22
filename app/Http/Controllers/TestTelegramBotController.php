@@ -803,6 +803,7 @@ class TestTelegramBotController extends Controller
      */
     public function verifyCode(Request $request)
     {
+        config(['database.default' => 'mysql_test']);
         $code = $request->input('code');
         $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
         $user->update(['participate_in_lottery' => true]);
