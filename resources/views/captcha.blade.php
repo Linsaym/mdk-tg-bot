@@ -12,13 +12,10 @@
 
             if (code) {
                 document.getElementById('hiddenCode').value = code;
-                // Показываем reCAPTCHA если код есть
-                document.querySelector('.g-recaptcha').style.display = 'block';
-                document.getElementById('telegramMessage').classList.add('hidden');
             } else {
                 document.getElementById('telegramMessage').classList.remove('hidden');
-                document.querySelector('.g-recaptcha').style.display = 'none';
                 document.getElementById('codeForm').classList.add('hidden');
+                document.querySelector('.g-recaptcha').style.display = 'none';
             }
         });
     </script>
@@ -105,7 +102,7 @@
         }
 
         .hidden {
-            display: none !important;
+            display: none;
         }
 
         .error {
@@ -124,15 +121,13 @@
 <body>
 <div class="container">
     <h1>Проверка безопасности</h1>
-
     <div id="telegramMessage" class="hidden">
         <p style="text-align: center; color: #ff6b6b;">
             Пожалуйста, откройте эту страницу через Telegram-бота для получения кода доступа.
         </p>
     </div>
-
     <div class="recaptcha-container">
-        <div class="g-recaptcha hidden"
+        <div class="g-recaptcha"
              data-sitekey="6Ld7S9ErAAAAAMkcWLORzZSwPKr4W3jvVZQLngF2"
              data-callback="onCaptchaSuccess"
              data-expired-callback="onCaptchaExpired"
@@ -142,7 +137,7 @@
     <form id="codeForm" class="hidden" method="POST" action="{{ route('verify.code') }}">
         @csrf
         <input type="hidden" id="hiddenCode" name="code">
-        <button type="submit" id="submitButton" disabled>Подтвердить человечность</button>
+        <button type="submit">Подтвердить человечность</button>
     </form>
 
     @if(session('error'))
@@ -160,31 +155,17 @@
 
 <script>
     function onCaptchaSuccess(response) {
-        console.log('reCAPTCHA пройдена успешно');
         document.getElementById('codeForm').classList.remove('hidden');
-        document.getElementById('submitButton').disabled = false;
     }
 
     function onCaptchaExpired() {
-        console.log('reCAPTCHA истекла');
         document.getElementById('codeForm').classList.add('hidden');
-        document.getElementById('submitButton').disabled = true;
         grecaptcha.reset();
     }
 
     function onCaptchaError() {
-        console.log('Ошибка reCAPTCHA');
         document.getElementById('codeForm').classList.add('hidden');
-        document.getElementById('submitButton').disabled = true;
     }
-
-    // Дополнительная проверка при загрузке
-    document.addEventListener('DOMContentLoaded', function () {
-        // Проверяем, загрузилась ли reCAPTCHA
-        if (typeof grecaptcha === 'undefined') {
-            console.error('reCAPTCHA не загрузилась');
-        }
-    });
 </script>
 </body>
 </html>
