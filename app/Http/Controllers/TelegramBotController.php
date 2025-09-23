@@ -27,9 +27,13 @@ class TelegramBotController extends Controller
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
 
 
+    /**
+     * @throws TelegramSDKException
+     */
     public function __construct(Api $telegram, TelegramMessageRepository $messageRepository)
     {
-        $this->telegram = $telegram;
+        $BotToken = config('telegram.bots.trip-vibe-bot.token');
+        $this->telegram = new Api($BotToken);
         $this->messageRepository = $messageRepository;
     }
 
@@ -70,7 +74,7 @@ class TelegramBotController extends Controller
             'chat_id' => $chatId,
             'text' => 'Идут тех работы. Пожалуйста подождите',
         ]);
-        return;
+        return response()->json(['status' => 'ok']);
 
 
         // Обработка callback-кнопок
