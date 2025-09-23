@@ -84,12 +84,33 @@ class SendLotteryNotification extends Command
                             ])
                         ]);
                     } else {
-                        $telegram->sendMessage([
-                            'chat_id' => $telegramId,
-                            'text' => $messageText,
-                            'link_preview_options' => json_encode(['is_disabled' => true]),
-                            'parse_mode' => 'HTML'
-                        ]);
+                        if ($messageType == 'reminder') {
+                            $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $telegramId;
+                            $telegram->sendMessage([
+                                'chat_id' => $telegramId,
+                                'text' => $messageText,
+                                'parse_mode' => 'HTML',
+                                'reply_markup' => json_encode([
+                                    'inline_keyboard' => [
+                                        [
+                                            [
+                                                'text' => 'Поделиться с друзьями',
+                                                'url' => "https://t.me/share/url?text=" . rawurlencode(
+                                                        "🌴Совпадаете по отпускному вайбу? Пройдите тест c другом и участвуйте в розыгрыше 100 000 Ozon баллов на двоих! 🎉"
+                                                    ) . "&url=" . urlencode($refLink)
+                                            ]
+                                        ]
+                                    ]
+                                ])
+                            ]);
+                        } else {
+                            $telegram->sendMessage([
+                                'chat_id' => $telegramId,
+                                'text' => $messageText,
+                                'link_preview_options' => json_encode(['is_disabled' => true]),
+                                'parse_mode' => 'HTML'
+                            ]);
+                        }
                     }
 
 
