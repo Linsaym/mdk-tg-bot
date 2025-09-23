@@ -30,7 +30,7 @@ class TelegramBotController extends Controller
     /**
      * @throws TelegramSDKException
      */
-    public function __construct(Api $telegram, TelegramMessageRepository $messageRepository)
+    public function __construct(TelegramMessageRepository $messageRepository)
     {
         $BotToken = config('telegram.bots.trip-vibe-bot.token');
         $this->telegram = new Api($BotToken);
