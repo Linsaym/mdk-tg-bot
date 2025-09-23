@@ -11,12 +11,12 @@ use Telegram\Bot\Exceptions\TelegramSDKException;
 
 class SendLotteryNotification extends Command
 {
-    protected $signature = 'notification:send {type=reminder} {--winners=}';
+    protected $signature = 'notification:send {type=reminder} {--winners=} {--start-from=}';
     protected $description = 'Отправляет уведомление о начале розыгрыша всем пользователям';
 
     const MESSAGES = [
         'lottery' => "
-        ✨ Разыгрываем 1&#160;000&#160;000 Ozon баллов целый месяц до 22&#160;октября!\n
+        ✨ Разыгрываем 1&#160;000&#160;000 Ozon баллов целый месяц до 20&#160;октября!\n
 Раз в две недели выбираем 10&#160;победителей – каждому подарим по 50&#160;000 баллов Ozon.\n
 Чем больше друзей вы пригласите — тем выше шансы на&#160;победу! Зовите всех и&#160;притягивайте удачу!\n
 🎉На что потратить баллы:\n
@@ -41,7 +41,6 @@ class SendLotteryNotification extends Command
      */
     public function handle(): void
     {
-        //поменять конфиг и бд
         config(['database.default' => 'mysql']);
         $testBotToken = config('telegram.bots.test.token');
         $telegram = new Api($testBotToken);
@@ -50,22 +49,31 @@ class SendLotteryNotification extends Command
 
         $messageType = $this->argument('type');
         $winners = $this->option('winners');
+        $startFromId = $this->option('start-from');
 
         // Получите текст сообщения
         $messageText = $this->getMessageText($messageType, $winners);
 
-        // Получаем только telegram_id для экономии памяти
-        $telegramIds = TravelUser::whereNotNull('telegram_id')
+        // Базовый запрос для получения telegram_id
+        $query = TravelUser::whereNotNull('telegram_id')
             ->where('telegram_id', '!=', '')
-            ->pluck('telegram_id');
+            ->orderBy('id');
+
+        // Если указан start-from, начинаем с этого ID
+        if ($startFromId) {
+            $query->where('id', '>=', $startFromId);
+            $this->info("Начинаем отправку с пользователя ID: {$startFromId}");
+        }
+
+        $telegramIds = $query->pluck('telegram_id', 'id');
 
         $this->info("Найдено пользователей: " . $telegramIds->count());
 
-        $batchSize = 30; // Размер батча
-        $delayBetweenBatches = 1; // Задержка между батчами в секундах
+        $batchSize = 30;
+        $delayBetweenBatches = 1;
 
         foreach ($telegramIds->chunk($batchSize) as $chunk) {
-            foreach ($chunk as $telegramId) {
+            foreach ($chunk as $userId => $telegramId) {
                 try {
                     if ($messageType == 'lottery') {
                         $telegram->sendMessage([
@@ -84,48 +92,24 @@ class SendLotteryNotification extends Command
                             ])
                         ]);
                     } else {
-                        if ($messageType == 'reminder') {
-                            $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $telegramId;
-                            $telegram->sendMessage([
-                                'chat_id' => $telegramId,
-                                'text' => $messageText,
-                                'parse_mode' => 'HTML',
-                                'reply_markup' => json_encode([
-                                    'inline_keyboard' => [
-                                        [
-                                            [
-                                                'text' => 'Поделиться с друзьями',
-                                                'url' => "https://t.me/share/url?text=" . rawurlencode(
-                                                        "🌴Совпадаете по отпускному вайбу? Пройдите тест c другом и участвуйте в розыгрыше 100 000 Ozon баллов на двоих! 🎉"
-                                                    ) . "&url=" . urlencode($refLink)
-                                            ]
-                                        ]
-                                    ]
-                                ])
-                            ]);
-                        } else {
-                            $telegram->sendMessage([
-                                'chat_id' => $telegramId,
-                                'text' => $messageText,
-                                'link_preview_options' => json_encode(['is_disabled' => true]),
-                                'parse_mode' => 'HTML'
-                            ]);
-                        }
+                        $telegram->sendMessage([
+                            'chat_id' => $telegramId,
+                            'text' => $messageText,
+                            'link_preview_options' => json_encode(['is_disabled' => true]),
+                            'parse_mode' => 'HTML'
+                        ]);
                     }
 
-
                     $successCount++;
-                    $this->info("Отправлено: {$telegramId}");
+                    $this->info("Отправлено: ID {$userId}, Telegram ID {$telegramId}");
                 } catch (TelegramResponseException $e) {
                     $errorCount++;
-                    $this->handleError($e, $telegramId);
+                    $this->handleError($e, $telegramId, $userId);
                 }
 
-                // Минимальная задержка между сообщениями
-                usleep(50000); // 0.05 секунды
+                usleep(50000);
             }
 
-            // Задержка между батчами
             if ($delayBetweenBatches > 0) {
                 sleep($delayBetweenBatches);
             }
@@ -134,16 +118,16 @@ class SendLotteryNotification extends Command
         $this->info("Рассылка завершена! Успешно: {$successCount}, Ошибок: {$errorCount}");
     }
 
-    protected function handleError($exception, $telegramId): void
+    protected function handleError($exception, $telegramId, $userId = null): void
     {
-        $errorMessage = "Ошибка для пользователя {$telegramId}: " . $exception->getMessage();
+        $userInfo = $userId ? "ID {$userId}, Telegram ID {$telegramId}" : "Telegram ID {$telegramId}";
+        $errorMessage = "Ошибка для пользователя {$userInfo}: " . $exception->getMessage();
         $this->error($errorMessage);
         Log::error($errorMessage);
 
-        // Можно добавить логику для блокировок
         if (str_contains($exception->getMessage(), 'bot was blocked')) {
-            TravelUser::where('telegram_id', $telegramId)->update(['telegram_id' => null]);
-            $this->warn("Пользователь заблокировал бота, telegram_id обнулен");
+            //TravelUser::where('telegram_id', $telegramId)->update(['telegram_id' => null]);
+            $this->warn("Пользователь {$userInfo} заблокировал бота, telegram_id обнулен");
         }
     }
 
