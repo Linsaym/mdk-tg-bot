@@ -36,7 +36,7 @@ class TelegramBotController extends Controller
     /**
      * @throws TelegramSDKException
      */
-    public function handleWebhook(Request $request)
+    public function handleWebhook2(Request $request)
     {
         // НЕМЕДЛЕННО отвечаем Telegram (200 OK)
         ignore_user_abort(true);
@@ -47,7 +47,7 @@ class TelegramBotController extends Controller
         }
 
         // Теперь обрабатываем в фоне
-        $this->processWebhookAsync($request);
+        //$this->processWebhookAsync($request);
 
         return response('', 200);
     }
@@ -55,7 +55,7 @@ class TelegramBotController extends Controller
     /**
      * @throws TelegramSDKException
      */
-    public function processWebhookAsync(Request $request)
+    public function handleWebhook(Request $request)
     {
         // Устанавливаем основную БД
         config(['database.default' => 'mysql']);
@@ -66,11 +66,11 @@ class TelegramBotController extends Controller
         $message = $update->getMessage();
         $callbackQuery = $update->getCallbackQuery();
 
-//        $this->telegram->sendMessage([
-//            'chat_id' => $chatId,
-//            'text' => 'Идут тех работы. Пожалуйста подождите',
-//        ]);
-//        return;
+        $this->telegram->sendMessage([
+            'chat_id' => $chatId,
+            'text' => 'Идут тех работы. Пожалуйста подождите',
+        ]);
+        return;
 
 
         // Обработка callback-кнопок
