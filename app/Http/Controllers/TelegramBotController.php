@@ -61,6 +61,7 @@ class TelegramBotController extends Controller
      */
     public function handleWebhook(Request $request)
     {
+        Log::info('we here', [$request->all()]);
         // Устанавливаем основную БД
         config(['database.default' => 'mysql']);
 
