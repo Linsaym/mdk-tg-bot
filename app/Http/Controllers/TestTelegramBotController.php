@@ -168,33 +168,34 @@ class TestTelegramBotController extends Controller
 
         $output = new BufferedOutput();
 
-        try {
-            $exitCode = Artisan::call('notification:send', [
-                'type' => $type,
-                '--winners' => $winners
-            ], $output);
-
-            $result = $output->fetch();
-
-            if ($exitCode === 0) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Рассылка успешно запущена',
-                    'output' => $result
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ошибка при запуске рассылки',
-                    'output' => $result
-                ], 500);
-            }
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Исключение при выполнении команды: ' . $e->getMessage()
-            ], 500);
-        }
+//        try {
+//            $exitCode = Artisan::call('notification:send', [
+//                'type' => $type,
+//                '--winners' => $winners
+//            ], $output);
+//
+//            $result = $output->fetch();
+//
+//            if ($exitCode === 0) {
+//                return response()->json([
+//                    'success' => true,
+//                    'message' => 'Рассылка успешно запущена',
+//                    'output' => $result
+//                ]);
+//            } else {
+//                return response()->json([
+//                    'success' => false,
+//                    'message' => 'Ошибка при запуске рассылки',
+//                    'output' => $result
+//                ], 500);
+//            }
+//        } catch (\Exception $e) {
+//            return response()->json([
+//                'success' => false,
+//                'message' => 'Исключение при выполнении команды: ' . $e->getMessage()
+//            ], 500);
+//        }
+        return 1;
     }
 
     /**
