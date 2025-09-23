@@ -51,67 +51,63 @@ class SendLotteryNotification extends Command
         $winners = $this->option('winners');
         $startFromId = $this->option('start-from');
 
-        // Получите текст сообщения
         $messageText = $this->getMessageText($messageType, $winners);
 
-        // Базовый запрос для получения telegram_id
         $query = TravelUser::whereNotNull('telegram_id')
             ->where('telegram_id', '!=', '')
             ->orderBy('id');
 
-        // Если указан start-from, начинаем с этого ID
         if ($startFromId) {
             $query->where('id', '>=', $startFromId);
-            $this->info("Начинаем отправку с пользователя ID: {$startFromId}");
         }
 
         $telegramIds = $query->pluck('telegram_id', 'id');
 
-        $this->info("Найдено пользователей: " . $telegramIds->count());
+        $batchSize = 50; // Увеличил размер батча
+        $concurrentRequests = 5; // Количество одновременных запросов
 
-        $batchSize = 30;
-        $delayBetweenBatches = 1;
+        foreach ($telegramIds->chunk($batchSize) as $chunkIndex => $chunk) {
+            $requests = [];
 
-        foreach ($telegramIds->chunk($batchSize) as $chunk) {
+            // Подготавливаем все запросы для батча
             foreach ($chunk as $userId => $telegramId) {
-                try {
-                    if ($messageType == 'lottery') {
-                        $telegram->sendMessage([
-                            'chat_id' => $telegramId,
-                            'text' => $messageText,
-                            'parse_mode' => 'HTML',
-                            'reply_markup' => json_encode([
-                                'inline_keyboard' => [
-                                    [
-                                        [
-                                            'text' => '🎉 Участвовать',
-                                            'callback_data' => 'participate'
-                                        ],
-                                    ],
-                                ]
-                            ])
-                        ]);
-                    } else {
-                        $telegram->sendMessage([
-                            'chat_id' => $telegramId,
-                            'text' => $messageText,
-                            'link_preview_options' => json_encode(['is_disabled' => true]),
-                            'parse_mode' => 'HTML'
-                        ]);
-                    }
+                $params = [
+                    'chat_id' => $telegramId,
+                    'text' => $messageText,
+                    'parse_mode' => 'HTML'
+                ];
 
-                    $successCount++;
-                    $this->info("Отправлено: ID {$userId}, Telegram ID {$telegramId}");
-                } catch (TelegramResponseException $e) {
-                    $errorCount++;
-                    $this->handleError($e, $telegramId, $userId);
+                if ($messageType == 'lottery') {
+                    $params['reply_markup'] = json_encode([
+                        'inline_keyboard' => [[['text' => '🎉 Участвовать', 'callback_data' => 'participate']]]
+                    ]);
+                } else {
+                    $params['link_preview_options'] = json_encode(['is_disabled' => true]);
                 }
 
-                usleep(50000);
+                $requests[] = compact('userId', 'telegramId', 'params');
             }
 
-            if ($delayBetweenBatches > 0) {
-                sleep($delayBetweenBatches);
+            // Отправляем запросы пачками с минимальной задержкой
+            foreach (array_chunk($requests, $concurrentRequests) as $requestChunk) {
+                $promises = [];
+
+                // Отправляем concurrentRequests запросов одновременно
+                foreach ($requestChunk as $request) {
+                    try {
+                        $telegram->sendMessage($request['params']);
+                        $successCount++;
+                    } catch (TelegramResponseException $e) {
+                        $errorCount++;
+                        $this->handleError($e, $request['telegramId'], $request['userId']);
+                    }
+
+                    // Минимальная задержка между запросами в рамках одной пачки
+                    usleep(20000); // 20ms вместо 50ms
+                }
+
+                // Задержка между пачками concurrent запросов
+                usleep(100000); // 100ms вместо 1 секунды
             }
         }
 
@@ -121,13 +117,16 @@ class SendLotteryNotification extends Command
     protected function handleError($exception, $telegramId, $userId = null): void
     {
         $userInfo = $userId ? "ID {$userId}, Telegram ID {$telegramId}" : "Telegram ID {$telegramId}";
-        $errorMessage = "Ошибка для пользователя {$userInfo}: " . $exception->getMessage();
-        $this->error($errorMessage);
-        Log::error($errorMessage);
 
         if (str_contains($exception->getMessage(), 'bot was blocked')) {
             //TravelUser::where('telegram_id', $telegramId)->update(['telegram_id' => null]);
-            $this->warn("Пользователь {$userInfo} заблокировал бота, telegram_id обнулен");
+            Log::warning("Пользователь {$userInfo} заблокировал бота");
+        } elseif (str_contains($exception->getMessage(), 'Too Many Requests')) {
+            Log::error("Rate limit для пользователя {$userInfo}");
+            // Можно добавить паузу при rate limit
+            sleep(1);
+        } else {
+            Log::error("Ошибка для пользователя {$userInfo}: " . $exception->getMessage());
         }
     }
 
