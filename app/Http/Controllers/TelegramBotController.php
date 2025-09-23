@@ -66,11 +66,11 @@ class TelegramBotController extends Controller
         $message = $update->getMessage();
         $callbackQuery = $update->getCallbackQuery();
 
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => 'Идут тех работы. Пожалуйста подождите',
-        ]);
-        return;
+//        $this->telegram->sendMessage([
+//            'chat_id' => $chatId,
+//            'text' => 'Идут тех работы. Пожалуйста подождите',
+//        ]);
+//        return;
 
 
         // Обработка callback-кнопок
