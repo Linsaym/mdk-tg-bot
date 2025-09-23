@@ -42,7 +42,7 @@ class SendLotteryNotification extends Command
     public function handle(): void
     {
         //поменять конфиг и бд
-        config(['database.default' => 'mysql_test']);
+        config(['database.default' => 'mysql']);
         $testBotToken = config('telegram.bots.test.token');
         $telegram = new Api($testBotToken);
         $successCount = 0;

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TelegramBotController;
 use App\Http\Controllers\TestTelegramBotController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -7,7 +8,7 @@ use Livewire\Volt\Volt;
 
 Route::view('/', 'welcome')->name('home');
 Route::view('/verification', 'captcha')->name('verification.form');
-Route::post('/verify-code', [TestTelegramBotController::class, 'verifyCode'])->name('verify.code');
+Route::post('/verify-code', [TelegramBotController::class, 'verifyCode'])->name('verify.code');
 Route::view('/success', 'captcha-success')->name('captcha-success');
 
 Route::middleware(['auth'])->group(function () {

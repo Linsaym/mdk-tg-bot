@@ -7,11 +7,12 @@ use App\Models\TravelUser;
 use App\Models\Question;
 use App\Repositories\TelegramMessageRepository;
 use Exception;
+use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Telegram\Bot\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Exceptions\TelegramSDKException;
-use Telegram\Bot\FileUpload\InputFile;
 
 class TelegramBotController extends Controller
 {
@@ -20,7 +21,7 @@ class TelegramBotController extends Controller
     private TelegramMessageRepository $messageRepository;
 
     // Общая инструкция
-    public string $instructions = "\n\nЧто нужно сделать:\n"
+    public string $instructions = "\nЧто нужно сделать:\n"
     . "1. Сначала самостоятельно пройдите тест из 10 вопросов.\n"
     . "2. Поделитесь ссылкой на тест с друзьями.\n"
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
@@ -59,6 +60,26 @@ class TelegramBotController extends Controller
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
             switch (true) {
+                case $text === "/winner-aB4":
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "🥳 Поздравляем! Вы стали победителем розыгрыша Ozon Travel Vibe.\n
+Ваш приз — 50&#160;000 Ozon-баллов. Вот ваш уникальный код: XXXXX-XXXXX.\n
+Информация об активации промокода и начислении баллов — читайте <a href='https://ozon.ru/t/OM4oXCz'>здесь</a>.\n
+А&#160;если возникли вопросы, пишите в&#160;наш чат поддержки: @Ozontravel1bot\n
+Спасибо, что участвуете вместе с&#160;нами! 💙",
+                        'parse_mode' => 'HTML',
+                    ]);
+                    break;
+                case $text === "/start_lottery-aB4":
+                    $this->sendLotteryNotification();
+                    break;
+                case $text === "/remind-aB4":
+                    $this->sendReminderNotification();
+                    break;
+                case $text === "/winers-aB4":
+                    $this->sendWinnersNotification();
+                    break;
                 case $text === "/code":
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,
@@ -129,6 +150,69 @@ class TelegramBotController extends Controller
         }
 
         $this->askForSubscription($chatId);
+    }
+
+    public function sendNotifications(Request $request)
+    {
+        $type = $request->input('type', 'lottery');
+        $winners = $request->input('winners');
+
+        $output = new BufferedOutput();
+
+        try {
+            $exitCode = Artisan::call('notification:send', [
+                'type' => $type,
+                '--winners' => $winners
+            ], $output);
+
+            $result = $output->fetch();
+
+            if ($exitCode === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Рассылка успешно запущена',
+                    'output' => $result
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ошибка при запуске рассылки',
+                    'output' => $result
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Исключение при выполнении команды: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Запуск рассылки о розыгрыше
+     */
+    public function sendLotteryNotification()
+    {
+        return $this->sendNotifications(new Request(['type' => 'lottery']));
+    }
+
+    /**
+     * Запуск рассылки о победителях
+     */
+    public function sendWinnersNotification()
+    {
+        return $this->sendNotifications(new Request([
+            'type' => 'winners',
+            'winners' => ""
+        ]));
+    }
+
+    /**
+     * Запуск напоминания
+     */
+    public function sendReminderNotification()
+    {
+        return $this->sendNotifications(new Request(['type' => 'reminder']));
     }
 
     /**
@@ -367,6 +451,62 @@ class TelegramBotController extends Controller
         $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
 
         switch ($data) {
+            case 'participate':
+                $this->telegram->sendMessage([
+                    'chat_id' => $chatId,
+                    'text' => "
+                    ✨Чтобы ваш билет удачи остался активным — <a href='https://ozon.ru/t/OM4oXCz'>подтвердите участие</a>! Жмите «Принять» и&#160;оставайтесь в&#160;игре за&#160;100&#160;000 Ozon-баллов на&#160;двоих — для вас и&#160;вашей тревел-половинки.
+                    ",
+                    'parse_mode' => 'HTML',
+                    'reply_markup' => json_encode([
+                        'inline_keyboard' => [
+                            [
+                                [
+                                    'text' => '✅ Принять условия',
+                                    'callback_data' => 'accept_terms'
+                                ],
+                            ],
+                        ]
+                    ])
+                ]);
+                break;
+            case 'accept_terms':
+                if ($user->participate_in_lottery) {
+                    $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $chatId;
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Вы уже участвуете в розыгрыше, а если хотите увеличить шансы — пригласите друзей 😉",
+                        'reply_markup' => json_encode([
+                            'inline_keyboard' => [
+                                [
+                                    [
+                                        'text' => 'Поделиться с друзьями',
+                                        'url' => "https://t.me/share/url?text=" . rawurlencode(
+                                                "🌴Совпадаете по отпускному вайбу? Пройдите тест c другом и участвуйте в розыгрыше 100 000 Ozon баллов на двоих! 🎉"
+                                            ) . "&url=" . urlencode($refLink)
+                                    ]
+                                ]
+                            ]
+                        ])
+                    ]);
+                } else {
+                    $this->telegram->sendMessage([
+                        'chat_id' => $chatId,
+                        'text' => "Последний шаг: <a href='https://mdk-bots.ru/verification?code=$chatId'>пройдите капчу</a> — и вы в конкурсе! 🎉",
+                        'parse_mode' => 'HTML',
+                    ]);
+//                    $user->update(['participate_in_lottery' => true, 'test_answers' => null]);
+//                    $this->telegram->sendMessage([
+//                        'chat_id' => $chatId,
+//                        'text' => "Вы участвуете в розыгрыше! 🎉"
+//                    ]);
+                }
+                break;
+            case 'skip_lottery':
+                $user->update(['participate_in_lottery' => false, 'test_answers' => null]);
+                $this->sendFirstQuestion($chatId);
+                //$this->removeInlineButtons($chatId, $messageId);
+                break;
             case 'check_subscription':
                 $this->handleSubscriptionCheck($chatId, $user);
                 break;
@@ -478,7 +618,7 @@ class TelegramBotController extends Controller
                         [
                             'text' => 'Поделиться с друзьями',
                             'url' => "https://t.me/share/url?text=" . rawurlencode(
-                                    "Пройди тест и узнаем, совпадаем ли мы по отпускному вайбу! 🌴 "
+                                    "🌴Совпадаете по отпускному вайбу? Пройдите тест c другом и участвуйте в розыгрыше 100 000 Ozon баллов на двоих! 🎉 "
                                 ) . "&url=" . urlencode($refLink)
                         ]
                     ]
@@ -574,8 +714,8 @@ class TelegramBotController extends Controller
         try {
             $partnerName = $partner->name ?: 'Ваш друг';
 
-            $message = "🎉 Результат совместимости с $partnerName!\n\n";
-            $message .= "{$compatibilityText}\n\n";
+            $message = "🎉 Результат совместимости с $partnerName!\n";
+            $message .= "{$compatibilityText}\n";
             $message .= "Вы можете пройти тест с другими друзьями, чтобы сравнить результаты!";
 
             $refLink = "https://t.me/ozon_travel_vibe_bot?start=" . $chatId;
@@ -627,5 +767,61 @@ class TelegramBotController extends Controller
                 'one_time_keyboard' => true
             ])
         ]);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    public function verifyCode(Request $request)
+    {
+        config(['database.default' => 'mysql']);
+        $code = $request->input('code');
+        $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
+        $user->update(['participate_in_lottery' => true]);
+        $this->telegram->sendMessage([
+            'chat_id' => $code,
+            'text' => "Поздравляем! \nВы участвуете в конкурсе. Удачи!🍀",
+            'parse_mode' => 'HTML',
+        ]);
+        return view('captcha-success');
+        $request->validate([
+            'code' => 'required|string',
+            'g-recaptcha-response' => 'required'
+        ]);
+
+        $code = $request->input('code');
+
+        // Проверка reCAPTCHA
+        $recaptchaResponse = $request->input('g-recaptcha-response');
+        $secretKey = '6Ld7S9ErAAAAAB6Hn4ISaDlUSPWA12kfG0Hu3YGg';
+
+        $response = file_get_contents(
+            "https://www.google.com/recaptcha/api/siteverify?secret=" .
+            $secretKey . "&response=" . $recaptchaResponse
+        );
+
+        $responseKeys = json_decode($response, true);
+
+        Log::info('Код, ключи успеха, секрет код', [$code, $responseKeys["success"], $responseKeys]);
+
+        if (intval($responseKeys["success"]) !== 1) {
+            return back()->with('error', 'Ошибка проверки reCAPTCHA');
+        }
+
+        if (!$code) {
+            return back()->with('error', 'Ошибка, попробуйте снова чуть позже');
+        }
+
+        $user = $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
+
+        $user->update(['participate_in_lottery' => true]);
+
+        $this->telegram->sendMessage([
+            'chat_id' => $code,
+            'text' => "Поздравляем! 🎊 \nВы успешно прошли капчу и теперь участвуете в конкурсе. Удачи! 🍀",
+            'parse_mode' => 'HTML',
+        ]);
+
+        return view('captcha-success');
     }
 }
