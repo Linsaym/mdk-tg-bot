@@ -51,6 +51,7 @@ class TelegramBotController extends Controller
             'chat_id' => $chatId,
             'text' => 'Идут тех работы. Пожалуйста подождите',
         ]);
+        return;
 
 
         // Обработка callback-кнопок
