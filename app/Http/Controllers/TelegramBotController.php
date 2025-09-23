@@ -38,6 +38,25 @@ class TelegramBotController extends Controller
      */
     public function handleWebhook(Request $request)
     {
+        // НЕМЕДЛЕННО отвечаем Telegram (200 OK)
+        ignore_user_abort(true);
+
+        if (function_exists('fastcgi_finish_request')) {
+            session_write_close();
+            fastcgi_finish_request();
+        }
+
+        // Теперь обрабатываем в фоне
+        $this->processWebhookAsync($request);
+
+        return response('', 200);
+    }
+
+    /**
+     * @throws TelegramSDKException
+     */
+    public function processWebhookAsync(Request $request)
+    {
         // Устанавливаем основную БД
         config(['database.default' => 'mysql']);
 
