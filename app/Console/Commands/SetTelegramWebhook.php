@@ -39,7 +39,7 @@ class SetTelegramWebhook extends Command
 
         $params = [
             'url' => $url,
-            'max_connections' => 40,
+            'max_connections' => 100,
             'allowed_updates' => $botConfig['allowed_updates'] ?? ['message', 'callback_query']
         ];
 

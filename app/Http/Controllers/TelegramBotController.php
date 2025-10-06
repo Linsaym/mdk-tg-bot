@@ -27,33 +27,10 @@ class TelegramBotController extends Controller
     . "3. После прохождения вы узнаете, подходите ли вы для совместных поездок или ваши предпочтения слишком разные по вайбу.";
 
 
-    /**
-     * @throws TelegramSDKException
-     */
-    public function __construct(TelegramMessageRepository $messageRepository)
+    public function __construct(Api $telegram, TelegramMessageRepository $messageRepository)
     {
-        $BotToken = config('telegram.bots.trip-vibe-bot.token');
-        $this->telegram = new Api($BotToken);
+        $this->telegram = $telegram;
         $this->messageRepository = $messageRepository;
-    }
-
-    /**
-     * @throws TelegramSDKException
-     */
-    public function handleWebhook2(Request $request)
-    {
-        // НЕМЕДЛЕННО отвечаем Telegram (200 OK)
-        ignore_user_abort(true);
-
-        if (function_exists('fastcgi_finish_request')) {
-            session_write_close();
-            fastcgi_finish_request();
-        }
-
-        // Теперь обрабатываем в фоне
-        //$this->processWebhookAsync($request);
-
-        return response('', 200);
     }
 
     /**
