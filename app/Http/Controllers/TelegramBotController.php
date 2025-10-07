@@ -38,21 +38,17 @@ class TelegramBotController extends Controller
      */
     public function handleWebhook(Request $request)
     {
-        Log::info('we here', [$request->all()]);
-        // Устанавливаем основную БД
-        config(['database.default' => 'mysql']);
-
         $update = $this->telegram->getWebhookUpdate();
 
         $chatId = $update->getChat()?->id;
         $message = $update->getMessage();
         $callbackQuery = $update->getCallbackQuery();
 
-        $this->telegram->sendMessage([
-            'chat_id' => $chatId,
-            'text' => 'Идут тех работы. Пожалуйста подождите',
-        ]);
-        return response()->json(['status' => 'ok']);
+//        $this->telegram->sendMessage([
+//            'chat_id' => $chatId,
+//            'text' => 'Идут тех работы. Пожалуйста подождите',
+//        ]);
+//        return response()->json(['status' => 'ok']);
 
 
         // Обработка callback-кнопок
@@ -806,7 +802,6 @@ class TelegramBotController extends Controller
      */
     public function verifyCode(Request $request)
     {
-        config(['database.default' => 'mysql']);
         $code = $request->input('code');
         $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
         $user->update(['participate_in_lottery' => true]);
