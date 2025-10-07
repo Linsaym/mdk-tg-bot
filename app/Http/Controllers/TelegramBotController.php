@@ -63,26 +63,6 @@ class TelegramBotController extends Controller
             $text_split = explode(' ', $text);
             $user = TravelUser::firstOrCreate(['telegram_id' => $chatId]);
             switch (true) {
-                case $text === "/winner-aB4":
-                    $this->telegram->sendMessage([
-                        'chat_id' => $chatId,
-                        'text' => "🥳 Поздравляем! Вы стали победителем розыгрыша Ozon Travel Vibe.\n
-Ваш приз — 50&#160;000 Ozon-баллов. Вот ваш уникальный код: XXXXX-XXXXX.\n
-Информация об активации промокода и начислении баллов — читайте <a href='https://ozon.ru/t/OM4oXCz'>здесь</a>.\n
-А&#160;если возникли вопросы, пишите в&#160;наш чат поддержки: @Ozontravel1bot\n
-Спасибо, что участвуете вместе с&#160;нами! 💙",
-                        'parse_mode' => 'HTML',
-                    ]);
-                    break;
-                case $text === "/start_lottery-aB4":
-                    $this->sendLotteryNotification();
-                    break;
-                case $text === "/remind-aB4":
-                    $this->sendReminderNotification();
-                    break;
-                case $text === "/winers-aB4":
-                    $this->sendWinnersNotification();
-                    break;
                 case $text === "/code":
                     $this->telegram->sendMessage([
                         'chat_id' => $chatId,

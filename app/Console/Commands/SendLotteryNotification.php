@@ -11,7 +11,7 @@ use Telegram\Bot\Exceptions\TelegramSDKException;
 
 class SendLotteryNotification extends Command
 {
-    protected $signature = 'notification:send {type=reminder} {--winners=} {--start-from=}';
+    protected $signature = 'notification:send {type=reminder} {--winners=} {--start-from=} {--end-from=} {--user-id=}';
     protected $description = 'Отправляет уведомление о начале розыгрыша всем пользователям';
 
     const MESSAGES = [
@@ -41,7 +41,6 @@ class SendLotteryNotification extends Command
      */
     public function handle(): void
     {
-        config(['database.default' => 'mysql']);
         $testBotToken = config('telegram.bots.trip-vibe-bot.token');
         $telegram = new Api($testBotToken);
         $successCount = 0;
@@ -50,6 +49,8 @@ class SendLotteryNotification extends Command
         $messageType = $this->argument('type');
         $winners = $this->option('winners');
         $startFromId = $this->option('start-from');
+        $endFromId = $this->option('end-from');
+        $userIdFilter = $this->option('user-id');
 
         $messageText = $this->getMessageText($messageType, $winners);
 
@@ -61,10 +62,19 @@ class SendLotteryNotification extends Command
             $query->where('id', '>=', $startFromId);
         }
 
+        if ($endFromId) {
+            $query->where('id', '<=', $endFromId);
+        }
+
+        //Если нам нужно отправить только одному юзеру по id
+        if ($userIdFilter) {
+            $query->where('id', $userIdFilter);
+        }
+
         $telegramIds = $query->pluck('telegram_id', 'id');
 
-        $batchSize = 50; // Увеличил размер батча
-        $concurrentRequests = 5; // Количество одновременных запросов
+        $batchSize = 20;
+        $concurrentRequests = 4; // Количество одновременных запросов
 
         foreach ($telegramIds->chunk($batchSize) as $chunkIndex => $chunk) {
             $requests = [];
@@ -101,13 +111,12 @@ class SendLotteryNotification extends Command
                         $errorCount++;
                         $this->handleError($e, $request['telegramId'], $request['userId']);
                     }
-
-                    // Минимальная задержка между запросами в рамках одной пачки
-                    usleep(20000); // 20ms вместо 50ms
+                    // Между запросами в пачке
+                    usleep(100000);
                 }
 
                 // Задержка между пачками concurrent запросов
-                usleep(100000); // 100ms вместо 1 секунды
+                usleep(300000);
             }
         }
 
