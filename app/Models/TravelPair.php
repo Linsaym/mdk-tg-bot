@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TravelPair extends Model
 {
     protected $table = 'travel_pairs';
+    public $timestamps = false;
     protected $fillable = [
-        'user1_id',
-        'user2_id',
-        'compatibility_type',
-        'score',
+        'user1',
+        'user2',
     ];
 
     public function user1()
@@ -24,13 +22,4 @@ class TravelPair extends Model
     {
         return $this->belongsTo(TravelUser::class, 'user2_id');
     }
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'score' => 'integer',
-    ];
 }

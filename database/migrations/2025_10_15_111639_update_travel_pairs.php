@@ -10,13 +10,11 @@ return new class extends Migration {
      */
     public function up(): void
     {
+        Schema::dropIfExists('travel_pairs');
         Schema::create('travel_pairs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user1_id')->constrained('travel_users');
-            $table->foreignId('user2_id')->constrained('travel_users');
-            $table->string('compatibility_type');
-            $table->integer('score');
-            $table->timestamps();
+            $table->string('user1');
+            $table->string('user2');
         });
     }
 
@@ -26,5 +24,13 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::dropIfExists('travel_pairs');
+        Schema::create('travel_pairs', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user1_id')->constrained('travel_users');
+            $table->foreignId('user2_id')->constrained('travel_users');
+            $table->string('compatibility_type');
+            $table->integer('score');
+            $table->timestamps();
+        });
     }
 };
