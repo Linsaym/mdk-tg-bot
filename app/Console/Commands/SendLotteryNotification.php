@@ -118,11 +118,11 @@ class SendLotteryNotification extends Command
                         $this->handleError($e, $request['telegramId'], $request['userId']);
                     }
                     // Между запросами в пачке
-                    usleep(400000);
+                    usleep(500000);
                 }
 
                 // Задержка между пачками concurrent запросов
-                usleep(300000);
+                usleep(400000);
             }
         }
 
