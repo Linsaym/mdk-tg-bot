@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\TravelUser;
 use App\Models\TravelPair;
+use Telegram\Bot\Api;
+use Telegram\Bot\Exceptions\TelegramSDKException;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Illuminate\Support\Facades\Log;
 
@@ -13,8 +15,18 @@ class GenerateTravelPairs extends Command
     protected $signature = 'travel:pairs:generate';
     protected $description = 'Generate travel pairs from users with invited_by relationship';
 
+    public Api $telegram;
+
+    /**
+     * @throws TelegramSDKException
+     */
     public function handle(): int
     {
+        $botName = $this->option('bot') ?: config('telegram.default');
+        $botConfig = config("telegram.bots.{$botName}");
+        $token = $botConfig['token'] ?? null;
+        $this->telegram = new Api($token);
+
         $this->info('Starting travel pairs generation...');
 
         // Дата фильтрации (берём пользователей, только с этого числа)
@@ -101,15 +113,11 @@ class GenerateTravelPairs extends Command
             // Задержка 0.5 секунды
             usleep(500000);
 
-            $userInfo = Telegram::getUserInfo(['user_id' => $telegramId]);
+            $response = $this->telegram->getChat([
+                'chat_id' => $telegramId
+            ]);
 
-            // Возвращаем username, если он есть
-            if (isset($userInfo['username']) && !empty($userInfo['username'])) {
-                return $userInfo['username'];
-            }
-
-            // Если username не найден - возвращаем null (пропускаем пару)
-            return null;
+            return $response['username'];
         } catch (\Exception $e) {
             $this->error("Error getting user info for {$telegramId}: " . $e->getMessage());
             Log::error("Error getting Telegram user info", [
