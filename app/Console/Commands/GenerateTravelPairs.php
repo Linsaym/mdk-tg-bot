@@ -22,7 +22,7 @@ class GenerateTravelPairs extends Command
      */
     public function handle(): int
     {
-        $botName = $this->option('bot') ?: config('telegram.default');
+        $botName = config('telegram.default');
         $botConfig = config("telegram.bots.{$botName}");
         $token = $botConfig['token'] ?? null;
         $this->telegram = new Api($token);
