@@ -22,9 +22,7 @@ class GenerateTravelPairs extends Command
      */
     public function handle(): int
     {
-        $botName = config('telegram.default');
-        $botConfig = config("telegram.bots.{$botName}");
-        $token = $botConfig['token'] ?? null;
+        $token = config('telegram.bots.trip-vibe-bot.token');
         $this->telegram = new Api($token);
 
         $this->info('Starting travel pairs generation...');
