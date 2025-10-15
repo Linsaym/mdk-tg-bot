@@ -59,7 +59,8 @@ class SendLotteryNotification extends Command
         $messageText = $this->getMessageText($messageType, $winners);
 
         $query = TravelUser::whereNotNull('telegram_id')
-            ->where('telegram_id', '!=', '')
+            ->whereNotNull('name')
+            ->where('is_subscribed', '=', true)
             ->orderBy('id');
 
         if ($startFromId) {
