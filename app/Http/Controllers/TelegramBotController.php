@@ -783,7 +783,7 @@ class TelegramBotController extends Controller
     public function verifyCode(Request $request)
     {
         $code = $request->input('code');
-        $user = TravelUser::where('telegram_id', '743206490')->firstOrFail();
+        $user = TravelUser::where('telegram_id', $code)->firstOrFail();
         $user->update(['participate_in_lottery' => true]);
         $this->telegram->sendMessage([
             'chat_id' => $code,
