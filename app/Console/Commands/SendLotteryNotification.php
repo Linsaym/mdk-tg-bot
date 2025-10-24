@@ -149,7 +149,7 @@ class SendLotteryNotification extends Command
 
     protected function getMessageText(string $type, ?string $winners = null): string
     {
-        $text = self::MESSAGES[$type] ?? self::MESSAGES['lottery'];
+        $text = self::MESSAGES[$type] ?? self::MESSAGES['winners'];
 
         if ($type === 'winners' && $winners) {
             $text = str_replace('%winners%', "@linsaym и @diasspra", $text);
