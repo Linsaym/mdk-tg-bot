@@ -52,23 +52,23 @@ class GenerateTravelPairs extends Command
                     continue;
                 }
 
+                // Получаем никнеймы через getUserInfo с задержкой
+                $inviterUsername = $this->getUsernameWithDelay($inviter->telegram_id);
+                $invitedUsername = $this->getUsernameWithDelay($invitedUser->telegram_id);
+
                 // Проверяем, существует ли уже такая пара
-                $existingPair = TravelPair::where(function ($query) use ($inviter, $invitedUser) {
-                    $query->where('user1', $inviter->telegram_id)
-                        ->where('user2', $invitedUser->telegram_id);
-                })->orWhere(function ($query) use ($inviter, $invitedUser) {
-                    $query->where('user1', $invitedUser->telegram_id)
-                        ->where('user2', $inviter->telegram_id);
+                $existingPair = TravelPair::where(function ($query) use ($inviterUsername, $invitedUsername, $inviter, $invitedUser) {
+                    $query->where('user1', $invitedUsername)
+                        ->where('user2', $inviterUsername);
+                })->orWhere(function ($query) use ($invitedUsername, $inviterUsername, $inviter, $invitedUser) {
+                    $query->where('user1', $inviterUsername)
+                        ->where('user2', $invitedUsername);
                 })->first();
 
                 if ($existingPair) {
                     $this->info("Pair already exists: {$inviter->telegram_id} - {$invitedUser->telegram_id}");
                     continue;
                 }
-
-                // Получаем никнеймы через getUserInfo с задержкой
-                $inviterUsername = $this->getUsernameWithDelay($inviter->telegram_id);
-                $invitedUsername = $this->getUsernameWithDelay($invitedUser->telegram_id);
 
                 // Если не получилось получить никнейм - пропускаем пару
                 if (!$inviterUsername || !$invitedUsername) {
